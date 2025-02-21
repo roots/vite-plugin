@@ -21,8 +21,6 @@ npm install @roots/vite-plugin --save-dev
 
 ## Usage
 
-### Basic Usage
-
 Start by adding the base plugin to your Vite config:
 
 ```js
