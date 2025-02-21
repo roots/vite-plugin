@@ -46,7 +46,7 @@ To enable this feature, add the `wordpressThemeJson` plugin to your Vite config:
 ```js
 // vite.config.js
 import { defineConfig } from 'vite';
-import { wordpressThemeJson } from '@wordpress/vite-plugin';
+import { wordpressThemeJson } from '@roots/vite-plugin';
 
 export default defineConfig({
   plugins: [
