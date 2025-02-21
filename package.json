@@ -1,0 +1,71 @@
+{
+  "name": "@roots/vite-plugin",
+  "version": "1.0.0",
+  "description": "A Vite plugin for working with WordPress.",
+  "keywords": [
+    "wordpress",
+    "vite",
+    "vite-plugin"
+  ],
+  "contributors": [
+    {
+        "email": "brandon@tendency.me",
+        "name": "Brandon Nifong",
+        "url": "https://github.com/log1x"
+    },
+    {
+      "email": "ben@benword.com",
+      "name": "Ben Word",
+      "url": "https://github.com/retlehs"
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/roots/vite-plugin",
+  "funding": {
+    "type": "github sponsors",
+    "url": "https://github.com/sponsors/roots"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/roots/vite-plugin.git"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "build": "npm run build-plugin",
+    "build-plugin": "rm -rf dist && npm run build-plugin-types && npm run build-plugin-esm",
+    "build-plugin-types": "tsc --emitDeclarationOnly",
+    "build-plugin-esm": "esbuild src/index.ts --platform=node --format=esm --outfile=dist/index.js",
+    "lint": "eslint --ext .ts ./src ./tests",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@wordpress/dependency-extraction-webpack-plugin": "^6.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.9",
+    "@typescript-eslint/eslint-plugin": "^5.21.0",
+    "@typescript-eslint/parser": "^5.21.0",
+    "esbuild": "0.16.10",
+    "eslint": "^8.14.0",
+    "tailwindcss": "^4.0.7",
+    "typescript": "^4.6.4",
+    "vite": "^6.0.0",
+    "vitest": "^0.34.4"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0"
+  },
+  "engines": {
+    "node": "^18.0.0 || ^20.0.0 || >=22.0.0"
+  }
+}
