@@ -12,6 +12,7 @@ Here lives a Vite plugin for WordPress development.
 - 🔄 Transforms `@wordpress/*` imports into global `wp.*` references
 - 📦 Generates dependency manifest for WordPress enqueuing
 - 🎨 Generates theme.json from Tailwind CSS configuration
+- 🔥 Hot Module Replacement (HMR) support for the WordPress editor
 
 ## Installation
 
@@ -36,6 +37,25 @@ export default defineConfig({
 Once you've added the plugin, WordPress dependencies referenced in your code will be transformed into global `wp.*` references.
 
 When WordPress dependencies are transformed, a manifest containing the required dependencies will be generated called `editor.deps.json`.
+
+### Editor HMR Support
+
+To enable HMR support in the WordPress editor, add the following to your editor entry point:
+
+```js
+// editor.js
+import { wordpressEditorHmr } from '@roots/vite-plugin';
+
+if (import.meta.hot) {
+  // Default usage - looks for 'editor.css'
+  wordpressEditorHmr(import.meta.hot);
+
+  // Optional: Specify a custom CSS filename
+  wordpressEditorHmr(import.meta.hot, 'custom-editor.css');
+}
+```
+
+This will enable CSS hot reloading in the WordPress editor without requiring a full page refresh. By default, it looks for a file named `editor.css`, but you can specify a custom filename if needed.
 
 ### Theme.json Generation
 
