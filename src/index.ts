@@ -175,6 +175,41 @@ interface WordPressPluginConfig {
      * @default ['.js', '.jsx', '.ts', '.tsx']
      */
     extensions?: SupportedExtension[];
+
+    /**
+     * HMR configuration for the WordPress editor
+     */
+    hmr?: {
+        /**
+         * Pattern to match editor entry points.
+         * Can be a string (exact match) or RegExp.
+         *
+         * @default /editor/
+         */
+        editorPattern?: string | RegExp;
+
+        /**
+         * Pattern to match editor CSS files.
+         * Can be a string (exact match) or RegExp.
+         *
+         * @default 'editor.css'
+         */
+        cssPattern?: string | RegExp;
+
+        /**
+         * Whether to enable HMR for the WordPress editor.
+         *
+         * @default true
+         */
+        enabled?: boolean;
+
+        /**
+         * Name of the editor iframe element.
+         *
+         * @default 'editor-canvas'
+         */
+        iframeName?: string;
+    };
 }
 
 /**
@@ -210,6 +245,57 @@ export function wordpressPlugin(
 ): VitePlugin {
     const extensions = config.extensions ?? SUPPORTED_EXTENSIONS;
     const dependencies = new Set<string>();
+
+    // HMR configuration with defaults
+    const hmrConfig = {
+        enabled: true,
+        editorPattern: /editor/,
+        cssPattern: 'editor.css',
+        iframeName: 'editor-canvas',
+        ...config.hmr
+    };
+
+    // HMR code to inject
+    const hmrCode = `
+if (import.meta.hot) {
+    import.meta.hot.on('vite:beforeUpdate', (payload) => {
+        const cssUpdates = payload.updates.filter(update => update.type === 'css-update');
+
+        if (cssUpdates.length > 0) {
+            const update = cssUpdates[0];
+
+            // Find the iframe
+            const editorIframe = document.querySelector('iframe[name="${hmrConfig.iframeName}"]');
+            if (!editorIframe?.contentDocument) {
+                window.location.reload();
+                return;
+            }
+
+            // Find the existing style tag in the iframe
+            const styles = editorIframe.contentDocument.getElementsByTagName('style');
+            let editorStyle = null;
+            for (const style of styles) {
+                if (style.textContent.includes('${hmrConfig.cssPattern}')) {
+                    editorStyle = style;
+                    break;
+                }
+            }
+
+            if (!editorStyle) {
+                window.location.reload();
+                return;
+            }
+
+            // Update the style content with new import and cache-busting timestamp
+            const timestamp = Date.now();
+            editorStyle.textContent = \`@import url('\${window.__vite_client_url}\${update.path}?t=\${timestamp}')\`;
+            return;
+        }
+
+        // For non-CSS updates, reload
+        window.location.reload();
+    });
+}`;
 
     /**
      * Extracts named imports from a WordPress import statement.
@@ -336,6 +422,18 @@ export function wordpressPlugin(
                         replacement
                     );
                 }
+            }
+
+            // Inject HMR code if this is the editor entry point
+            if (
+                hmrConfig.enabled &&
+                !transformedCode.includes('vite:beforeUpdate') &&
+                (
+                    (typeof hmrConfig.editorPattern === 'string' && id.includes(hmrConfig.editorPattern)) ||
+                    (hmrConfig.editorPattern instanceof RegExp && hmrConfig.editorPattern.test(id))
+                )
+            ) {
+                transformedCode = `${transformedCode}\n${hmrCode}`;
             }
 
             return {
