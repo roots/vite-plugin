@@ -1,23 +1,11 @@
-<p align="center">
-  <a href="https://roots.io">
-    <img alt="Roots" src="https://cdn.roots.io/app/uploads/logo-roots.svg" width="150">
-  </a>
-</p>
+# WordPress Vite Plugin
 
-<p align="center">
-  <img alt="MIT License" src="https://img.shields.io/github/license/roots/vite-plugin?color=%23525ddc&style=flat-square" />
-  <img alt="npm" src="https://img.shields.io/npm/v/@roots/vite-plugin.svg?color=%23525ddc&style=flat-square" />
-  <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/roots/vite-plugin/tests.yml?color=%23525ddc&style=flat-square" />
-  <img alt="Follow Roots" src="https://img.shields.io/twitter/follow/rootswp.svg?color=%23525ddc&style=flat-square" />
-</p>
+![MIT License](https://img.shields.io/github/license/roots/vite-plugin?color=%23525ddc&style=flat-square)
+![npm](https://img.shields.io/npm/v/@roots/vite-plugin.svg?color=%23525ddc&style=flat-square)
+![Build Status](https://img.shields.io/github/actions/workflow/status/roots/vite-plugin/tests.yml?color=%23525ddc&style=flat-square)
+![Follow Roots](https://img.shields.io/twitter/follow/rootswp.svg?color=%23525ddc&style=flat-square)
 
-<h1 align="center"><strong>WordPress Vite Plugin</strong></h1>
-
-<p align="center">
-  A Vite plugin for WordPress development.
-</p>
-
----
+Here lives a Vite plugin for WordPress development.
 
 ## Features
 
