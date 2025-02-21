@@ -1,4 +1,4 @@
-# WordPress Vite Plugin
+# Vite Plugin for WordPress
 
 ![MIT License](https://img.shields.io/github/license/roots/vite-plugin?color=%23525ddc&style=flat-square)
 ![npm](https://img.shields.io/npm/v/@roots/vite-plugin.svg?color=%23525ddc&style=flat-square)
