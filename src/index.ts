@@ -159,6 +159,10 @@ interface ThemeJson {
     [key: string]: unknown;
 }
 
+interface ViteClientWindow extends Window {
+    __vite_client_url: string;
+}
+
 /**
  * Supported file extensions for WordPress imports transformation
  */
@@ -693,7 +697,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
  * }
  * ```
  */
-export function wordpressEditorHmr(hot: any, cssFile: string = 'editor.css'): void {
+export function wordpressEditorHmr(hot: { on: (event: string, callback: (payload: { updates: Array<{ type: string; path: string }> }) => void) => void }, cssFile = 'editor.css'): void {
   hot.on('vite:beforeUpdate', (payload: { updates: Array<{ type: string; path: string }> }) => {
     const cssUpdates = payload.updates.filter(update => update.type === 'css-update');
 
@@ -724,7 +728,8 @@ export function wordpressEditorHmr(hot: any, cssFile: string = 'editor.css'): vo
 
       // Update the style content with new import and cache-busting timestamp
       const timestamp = Date.now();
-      editorStyle.textContent = `@import url('${(window as any).__vite_client_url}${update.path}?t=${timestamp}')`;
+      const viteWindow = window as unknown as ViteClientWindow;
+      editorStyle.textContent = `@import url('${viteWindow.__vite_client_url}${update.path}?t=${timestamp}')`;
       return;
     }
 
