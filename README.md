@@ -40,22 +40,37 @@ When WordPress dependencies are transformed, a manifest containing the required 
 
 ### Editor HMR Support
 
-To enable HMR support in the WordPress editor, add the following to your editor entry point:
+The plugin automatically enables CSS Hot Module Replacement (HMR) for the WordPress editor. By default, it will handle CSS updates for any file named `editor.css` without requiring a full page reload.
+
+> **Note:** JavaScript HMR is not supported at this time. JS changes will trigger a full page reload.
+
+You can customize the HMR behavior in your Vite config:
 
 ```js
-// editor.js
-import { wordpressEditorHmr } from '@roots/vite-plugin';
+// vite.config.js
+import { defineConfig } from 'vite';
+import { wordpressPlugin } from '@roots/vite-plugin';
 
-if (import.meta.hot) {
-  // Default usage - looks for 'editor.css'
-  wordpressEditorHmr(import.meta.hot);
+export default defineConfig({
+  plugins: [
+    wordpressPlugin({
+      hmr: {
+        // Enable/disable HMR (default: true)
+        enabled: true,
 
-  // Optional: Specify a custom CSS filename
-  wordpressEditorHmr(import.meta.hot, 'custom-editor.css');
-}
+        // Pattern to match editor entry points (default: /editor/)
+        editorPattern: /editor/,
+
+        // Pattern to match editor CSS files (default: 'editor.css')
+        cssPattern: 'editor.css',
+
+        // Name of the editor iframe element (default: 'editor-canvas')
+        iframeName: 'editor-canvas',
+      }
+    })
+  ],
+});
 ```
-
-This will enable CSS hot reloading in the WordPress editor without requiring a full page refresh. By default, it looks for a file named `editor.css`, but you can specify a custom filename if needed.
 
 ### Theme.json Generation
 

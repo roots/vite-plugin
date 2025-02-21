@@ -159,10 +159,6 @@ interface ThemeJson {
     [key: string]: unknown;
 }
 
-interface ViteClientWindow extends Window {
-    __vite_client_url: string;
-}
-
 /**
  * Supported file extensions for WordPress imports transformation
  */
@@ -179,6 +175,41 @@ interface WordPressPluginConfig {
      * @default ['.js', '.jsx', '.ts', '.tsx']
      */
     extensions?: SupportedExtension[];
+
+    /**
+     * HMR configuration for the WordPress editor
+     */
+    hmr?: {
+        /**
+         * Pattern to match editor entry points.
+         * Can be a string (exact match) or RegExp.
+         *
+         * @default /editor/
+         */
+        editorPattern?: string | RegExp;
+
+        /**
+         * Pattern to match editor CSS files.
+         * Can be a string (exact match) or RegExp.
+         *
+         * @default 'editor.css'
+         */
+        cssPattern?: string | RegExp;
+
+        /**
+         * Whether to enable HMR for the WordPress editor.
+         *
+         * @default true
+         */
+        enabled?: boolean;
+
+        /**
+         * Name of the editor iframe element.
+         *
+         * @default 'editor-canvas'
+         */
+        iframeName?: string;
+    };
 }
 
 /**
@@ -214,6 +245,57 @@ export function wordpressPlugin(
 ): VitePlugin {
     const extensions = config.extensions ?? SUPPORTED_EXTENSIONS;
     const dependencies = new Set<string>();
+
+    // HMR configuration with defaults
+    const hmrConfig = {
+        enabled: true,
+        editorPattern: /editor/,
+        cssPattern: 'editor.css',
+        iframeName: 'editor-canvas',
+        ...config.hmr
+    };
+
+    // HMR code to inject
+    const hmrCode = `
+if (import.meta.hot) {
+    import.meta.hot.on('vite:beforeUpdate', (payload) => {
+        const cssUpdates = payload.updates.filter(update => update.type === 'css-update');
+
+        if (cssUpdates.length > 0) {
+            const update = cssUpdates[0];
+
+            // Find the iframe
+            const editorIframe = document.querySelector('iframe[name="${hmrConfig.iframeName}"]');
+            if (!editorIframe?.contentDocument) {
+                window.location.reload();
+                return;
+            }
+
+            // Find the existing style tag in the iframe
+            const styles = editorIframe.contentDocument.getElementsByTagName('style');
+            let editorStyle = null;
+            for (const style of styles) {
+                if (style.textContent.includes('${hmrConfig.cssPattern}')) {
+                    editorStyle = style;
+                    break;
+                }
+            }
+
+            if (!editorStyle) {
+                window.location.reload();
+                return;
+            }
+
+            // Update the style content with new import and cache-busting timestamp
+            const timestamp = Date.now();
+            editorStyle.textContent = \`@import url('\${window.__vite_client_url}\${update.path}?t=\${timestamp}')\`;
+            return;
+        }
+
+        // For non-CSS updates, reload
+        window.location.reload();
+    });
+}`;
 
     /**
      * Extracts named imports from a WordPress import statement.
@@ -340,6 +422,18 @@ export function wordpressPlugin(
                         replacement
                     );
                 }
+            }
+
+            // Inject HMR code if this is the editor entry point
+            if (
+                hmrConfig.enabled &&
+                !transformedCode.includes('vite:beforeUpdate') &&
+                (
+                    (typeof hmrConfig.editorPattern === 'string' && id.includes(hmrConfig.editorPattern)) ||
+                    (hmrConfig.editorPattern instanceof RegExp && hmrConfig.editorPattern.test(id))
+                )
+            ) {
+                transformedCode = `${transformedCode}\n${hmrCode}`;
             }
 
             return {
@@ -678,62 +772,4 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
             }
         },
     };
-}
-
-/**
- * Sets up HMR handling for WordPress editor CSS updates.
- * This function should be called in your editor.js file when HMR is available.
- * It will handle CSS updates by injecting them into the editor iframe without a full reload.
- *
- * @param hot - The Vite HMR API object (import.meta.hot)
- * @param cssFile - Optional filename to match for CSS updates (defaults to 'editor.css')
- *
- * @example
- * ```js
- * if (import.meta.hot) {
- *   wordpressEditorHmr(import.meta.hot);
- *   // Or with custom CSS file:
- *   wordpressEditorHmr(import.meta.hot, 'custom-editor.css');
- * }
- * ```
- */
-export function wordpressEditorHmr(hot: { on: (event: string, callback: (payload: { updates: Array<{ type: string; path: string }> }) => void) => void }, cssFile = 'editor.css'): void {
-  hot.on('vite:beforeUpdate', (payload: { updates: Array<{ type: string; path: string }> }) => {
-    const cssUpdates = payload.updates.filter(update => update.type === 'css-update');
-
-    if (cssUpdates.length > 0) {
-      const update = cssUpdates[0];
-
-      // Find the iframe
-      const editorIframe = document.querySelector('iframe[name="editor-canvas"]') as HTMLIFrameElement | null;
-      if (!editorIframe?.contentDocument) {
-        window.location.reload();
-        return;
-      }
-
-      // Find the existing style tag in the iframe
-      const styles = editorIframe.contentDocument.getElementsByTagName('style');
-      let editorStyle = null;
-      for (const style of styles) {
-        if (style.textContent?.includes(cssFile)) {
-          editorStyle = style;
-          break;
-        }
-      }
-
-      if (!editorStyle) {
-        window.location.reload();
-        return;
-      }
-
-      // Update the style content with new import and cache-busting timestamp
-      const timestamp = Date.now();
-      const viteWindow = window as unknown as ViteClientWindow;
-      editorStyle.textContent = `@import url('${viteWindow.__vite_client_url}${update.path}?t=${timestamp}')`;
-      return;
-    }
-
-    // For non-CSS updates, reload
-    window.location.reload();
-  });
 }
