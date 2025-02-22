@@ -515,27 +515,31 @@ describe('wordpressThemeJson', () => {
         (plugin.generateBundle as any).call({ emitFile });
 
         const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Blue (50)',
             slug: 'blue-50',
             color: '#f0f9ff',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Blue (100)',
             slug: 'blue-100',
             color: '#e0f2fe',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Red (500)',
             slug: 'red-500',
             color: '#ef4444',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Gray (900)',
             slug: 'gray-900',
             color: '#111827',
         });
-        // Non-shaded colors should be capitalized
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Primary',
             slug: 'primary',
