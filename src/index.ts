@@ -16,6 +16,14 @@ interface ThemeJsonPluginOptions {
     tailwindConfig?: Record<string, unknown>;
 
     /**
+     * Labels for color shades to use in the WordPress editor.
+     * Keys should be shade numbers (e.g. 50, 100, 500) and values are the human-readable labels.
+     * For example: { 50: 'Lightest', 100: 'Lighter', 500: 'Default' }
+     * When provided, color names will be formatted as '{label} {color}' instead of '{color} ({shade})'.
+     */
+    shadeLabels?: Record<string, string>;
+
+    /**
      * Whether to disable generating color palette entries in theme.json.
      * When true, no color variables will be processed from the @theme block.
      *
@@ -252,7 +260,7 @@ export function wordpressPlugin(
         editorPattern: /editor/,
         cssPattern: 'editor.css',
         iframeName: 'editor-canvas',
-        ...config.hmr
+        ...config.hmr,
     };
 
     // HMR code to inject
@@ -428,10 +436,10 @@ if (import.meta.hot) {
             if (
                 hmrConfig.enabled &&
                 !transformedCode.includes('vite:beforeUpdate') &&
-                (
-                    (typeof hmrConfig.editorPattern === 'string' && id.includes(hmrConfig.editorPattern)) ||
-                    (hmrConfig.editorPattern instanceof RegExp && hmrConfig.editorPattern.test(id))
-                )
+                ((typeof hmrConfig.editorPattern === 'string' &&
+                    id.includes(hmrConfig.editorPattern)) ||
+                    (hmrConfig.editorPattern instanceof RegExp &&
+                        hmrConfig.editorPattern.test(id)))
             ) {
                 transformedCode = `${transformedCode}\n${hmrCode}`;
             }
@@ -672,14 +680,20 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                           .filter(([name]) => !name.endsWith('-*'))
                           .map(([name, value]) => {
                               const [colorName, shade] = name.split('-');
+                              const capitalizedColor =
+                                  colorName.charAt(0).toUpperCase() +
+                                  colorName.slice(1);
                               const displayName =
                                   shade && !Number.isNaN(Number(shade))
-                                      ? `${colorName}-${shade}`
-                                      : name;
+                                      ? config.shadeLabels &&
+                                        shade in config.shadeLabels
+                                          ? `${config.shadeLabels[shade]} ${capitalizedColor}`
+                                          : `${capitalizedColor} (${shade})`
+                                      : capitalizedColor;
 
                               return {
                                   name: displayName,
-                                  slug: displayName.toLowerCase(),
+                                  slug: name.toLowerCase(),
                                   color: value,
                               };
                           })
