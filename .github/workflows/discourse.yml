@@ -13,6 +13,6 @@ jobs:
         discourse-api-key: ${{ secrets.DISCOURSE_RELEASES_API_KEY }}
         discourse-base-url: ${{ secrets.DISCOURSE_BASE_URL }}
         discourse-author-username: Log1x
-        discourse-category: 11
+        discourse-category: 28
         discourse-tags:
           releases
