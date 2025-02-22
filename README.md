@@ -101,6 +101,9 @@ export default defineConfig({
       baseThemeJsonPath: './theme.json',
       outputPath: 'assets/theme.json',
       cssFile: 'app.css',
+
+      // Optional: Legacy Tailwind config path
+      tailwindConfig: './tailwind.config.js',
     }),
   ],
 });
