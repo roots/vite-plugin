@@ -1,9 +1,9 @@
 # Vite Plugin for WordPress
 
-![MIT License](https://img.shields.io/github/license/roots/vite-plugin?color=%23525ddc&style=flat-square)
-![npm](https://img.shields.io/npm/v/@roots/vite-plugin.svg?color=%23525ddc&style=flat-square)
-![Build Status](https://img.shields.io/github/actions/workflow/status/roots/vite-plugin/tests.yml?color=%23525ddc&style=flat-square)
-![Follow Roots](https://img.shields.io/twitter/follow/rootswp.svg?color=%23525ddc&style=flat-square)
+<a href="https://github.com/roots/vite-plugin/blob/main/LICENSE.md"><img alt="MIT License" src="https://img.shields.io/github/license/roots/vite-plugin?color=%23525ddc&style=flat-square"></a>
+<a href="https://www.npmjs.com/package/@roots/vite-plugin"><img alt="npm version" src="https://img.shields.io/npm/v/@roots/vite-plugin.svg?color=%23525ddc&style=flat-square"></a>
+<a href="https://github.com/roots/vite-plugin/actions/workflows/tests.yml"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/roots/vite-plugin/tests.yml?color=%23525ddc&style=flat-square"></a>
+<a href="https://bsky.app/profile/roots.dev"><img alt="Follow roots.dev on Bluesky" src="https://img.shields.io/badge/follow-@roots.dev-0085ff?logo=bluesky&style=flat-square"></a>
 
 Here lives a Vite plugin for WordPress development.
 
