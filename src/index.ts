@@ -9,11 +9,13 @@ import path from 'path';
 
 interface ThemeJsonPluginOptions {
     /**
-     * The Tailwind configuration object containing design tokens.
+     * Path to the Tailwind configuration file.
      * This is used as a source of truth for generating theme.json settings.
      * If not provided, only CSS variables from the @theme block will be processed.
+     *
+     * @example './tailwind.config.js'
      */
-    tailwindConfig?: Record<string, unknown>;
+    tailwindConfig?: string;
 
     /**
      * Labels for color shades to use in the WordPress editor.
@@ -470,7 +472,7 @@ interface ThemeJsonConfig extends ThemeJsonPluginOptions {
      * This is used as a source of truth for generating theme.json settings.
      * If not provided, only CSS variables from the @theme block will be processed.
      */
-    tailwindConfig?: Record<string, unknown>;
+    tailwindConfig?: string;
 
     /**
      * The path to the base theme.json file.
@@ -492,6 +494,129 @@ interface ThemeJsonConfig extends ThemeJsonPluginOptions {
      * @default 'app.css'
      */
     cssFile?: string;
+}
+
+interface TailwindTheme {
+    colors?: Record<string, unknown>;
+    fontFamily?: Record<string, string[] | string>;
+    fontSize?: Record<string, string | [string, Record<string, string>]>;
+    extend?: {
+        colors?: Record<string, unknown>;
+        fontFamily?: Record<string, string[] | string>;
+        fontSize?: Record<string, string | [string, Record<string, string>]>;
+    };
+}
+
+interface TailwindConfig {
+    theme?: TailwindTheme;
+}
+
+/**
+ * Merges base theme with extended theme properties
+ */
+function mergeThemeWithExtend(theme: TailwindTheme): TailwindTheme {
+    if (!theme.extend) return theme;
+
+    return {
+        ...theme,
+        colors: {
+            ...theme.colors,
+            ...theme.extend.colors,
+        },
+        fontFamily: {
+            ...theme.fontFamily,
+            ...theme.extend.fontFamily,
+        },
+        fontSize: {
+            ...theme.fontSize,
+            ...theme.extend.fontSize,
+        },
+    };
+}
+
+/**
+ * Flattens a nested color object into an array of [name, value] pairs
+ */
+function flattenColors(
+    colors: Record<string, unknown>
+): Array<[string, string]> {
+    const flattened: Array<[string, string]> = [];
+
+    for (const [name, value] of Object.entries(colors)) {
+        if (typeof value === 'string') {
+            flattened.push([name, value]);
+        } else if (typeof value === 'object' && value !== null) {
+            // Handle nested color objects (e.g. { orange: { 500: '#...' } })
+            for (const [shade, shadeValue] of Object.entries(value)) {
+                if (typeof shadeValue === 'string') {
+                    flattened.push([`${name}-${shade}`, shadeValue]);
+                }
+            }
+        }
+    }
+
+    return flattened;
+}
+
+/**
+ * Processes font families from Tailwind config into theme.json format
+ */
+function processFontFamilies(
+    fonts: Record<string, string[] | string>
+): Array<{ name: string; slug: string; fontFamily: string }> {
+    return Object.entries(fonts).map(([name, value]) => {
+        const fontFamily = Array.isArray(value) ? value.join(', ') : value;
+        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+
+        return {
+            name: capitalizedName,
+            slug: name.toLowerCase(),
+            fontFamily,
+        };
+    });
+}
+
+/**
+ * Processes font sizes from Tailwind config into theme.json format
+ */
+function processFontSizes(
+    sizes: Record<string, string | [string, Record<string, string>]>
+): Array<{ name: string; slug: string; size: string }> {
+    return Object.entries(sizes).map(([name, value]) => {
+        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+        // Handle both simple sizes and sizes with line height config
+        const size = Array.isArray(value) ? value[0] : value;
+
+        return {
+            name: capitalizedName,
+            slug: name.toLowerCase(),
+            size,
+        };
+    });
+}
+
+/**
+ * Loads and resolves the Tailwind configuration from the provided path
+ */
+async function loadTailwindConfig(configPath: string): Promise<TailwindConfig> {
+    try {
+        const absolutePath = path.resolve(configPath);
+        const config = await import(absolutePath);
+        const resolvedConfig = config.default || config;
+
+        // Merge extended theme properties if they exist
+        if (resolvedConfig.theme?.extend) {
+            resolvedConfig.theme = mergeThemeWithExtend(resolvedConfig.theme);
+        }
+
+        return resolvedConfig;
+    } catch (error) {
+        throw new Error(
+            `Failed to load Tailwind config from ${configPath}: ${
+                error instanceof Error ? error.message : String(error)
+            }`
+        );
+    }
 }
 
 /**
@@ -540,9 +665,10 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
     } = config;
 
     let cssContent: string | null = null;
+    let resolvedTailwindConfig: TailwindConfig | undefined;
 
-    if (tailwindConfig !== undefined && typeof tailwindConfig !== 'object') {
-        throw new Error('tailwindConfig must be an object or undefined');
+    if (tailwindConfig !== undefined && typeof tailwindConfig !== 'string') {
+        throw new Error('tailwindConfig must be a string path or undefined');
     }
 
     /**
@@ -633,6 +759,14 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         name: 'wordpress-theme-json',
         enforce: 'post',
 
+        async configResolved() {
+            if (tailwindConfig) {
+                resolvedTailwindConfig = await loadTailwindConfig(
+                    tailwindConfig
+                );
+            }
+        },
+
         transform(code: string, id: string) {
             if (id.includes(cssFile)) {
                 cssContent = code;
@@ -642,21 +776,28 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         },
 
         async generateBundle() {
-            if (!cssContent) return;
-
             try {
                 const baseThemeJson = JSON.parse(
                     fs.readFileSync(path.resolve(baseThemeJsonPath), 'utf8')
                 ) as ThemeJson;
 
-                const themeContent = extractThemeContent(cssContent);
+                // Extract theme content if CSS is available
+                const themeContent = cssContent
+                    ? extractThemeContent(cssContent)
+                    : null;
 
-                if (!themeContent) return; // No @theme block to process
+                // If no @theme block and no Tailwind config, nothing to do
+                if (!themeContent && !resolvedTailwindConfig) return;
 
                 /**
                  * Helper to extract CSS variables using a regex pattern
                  */
-                const extractVariables = (regex: RegExp, content: string) => {
+                const extractVariables = (
+                    regex: RegExp,
+                    content: string | null
+                ) => {
+                    if (!content) return [];
+
                     const variables: Array<[string, string]> = [];
                     let match: RegExpExecArray | null;
 
@@ -675,28 +816,56 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     FONT_SIZE: /--text-([^:]+):\s*([^;}]+)[;}]?/g,
                 } as const;
 
+                // Process colors from either @theme block or Tailwind config
                 const colorEntries = !disableTailwindColors
-                    ? extractVariables(patterns.COLOR, themeContent)
-                          .filter(([name]) => !name.endsWith('-*'))
-                          .map(([name, value]) => {
-                              const [colorName, shade] = name.split('-');
-                              const capitalizedColor =
-                                  colorName.charAt(0).toUpperCase() +
-                                  colorName.slice(1);
-                              const displayName =
-                                  shade && !Number.isNaN(Number(shade))
-                                      ? config.shadeLabels &&
-                                        shade in config.shadeLabels
-                                          ? `${config.shadeLabels[shade]} ${capitalizedColor}`
-                                          : `${capitalizedColor} (${shade})`
-                                      : capitalizedColor;
+                    ? [
+                          // Process @theme block colors if available
+                          ...extractVariables(patterns.COLOR, themeContent)
+                              .filter(([name]) => !name.endsWith('-*'))
+                              .map(([name, value]) => {
+                                  const [colorName, shade] = name.split('-');
+                                  const capitalizedColor =
+                                      colorName.charAt(0).toUpperCase() +
+                                      colorName.slice(1);
+                                  const displayName =
+                                      shade && !Number.isNaN(Number(shade))
+                                          ? config.shadeLabels &&
+                                            shade in config.shadeLabels
+                                              ? `${config.shadeLabels[shade]} ${capitalizedColor}`
+                                              : `${capitalizedColor} (${shade})`
+                                          : capitalizedColor;
 
-                              return {
-                                  name: displayName,
-                                  slug: name.toLowerCase(),
-                                  color: value,
-                              };
-                          })
+                                  return {
+                                      name: displayName,
+                                      slug: name.toLowerCase(),
+                                      color: value,
+                                  };
+                              }),
+                          // Process Tailwind config colors if available
+                          ...(resolvedTailwindConfig?.theme?.colors
+                              ? flattenColors(
+                                    resolvedTailwindConfig.theme.colors
+                                ).map(([name, value]) => {
+                                    const [colorName, shade] = name.split('-');
+                                    const capitalizedColor =
+                                        colorName.charAt(0).toUpperCase() +
+                                        colorName.slice(1);
+                                    const displayName =
+                                        shade && !Number.isNaN(Number(shade))
+                                            ? config.shadeLabels &&
+                                              shade in config.shadeLabels
+                                                ? `${config.shadeLabels[shade]} ${capitalizedColor}`
+                                                : `${capitalizedColor} (${shade})`
+                                            : capitalizedColor;
+
+                                    return {
+                                        name: displayName,
+                                        slug: name.toLowerCase(),
+                                        color: value,
+                                    };
+                                })
+                              : []),
+                      ]
                     : undefined;
 
                 const invalidFontProps = [
@@ -711,29 +880,54 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                 ];
 
                 const fontFamilyEntries = !disableTailwindFonts
-                    ? extractVariables(patterns.FONT_FAMILY, themeContent)
-                          .filter(
-                              ([name]) =>
-                                  !invalidFontProps.some((prop) =>
-                                      name.includes(prop)
-                                  )
+                    ? [
+                          // Process @theme block font families if available
+                          ...extractVariables(
+                              patterns.FONT_FAMILY,
+                              themeContent
                           )
-                          .map(([name, value]) => ({
-                              name,
-                              slug: name.toLowerCase(),
-                              fontFamily: value.replace(/['"]/g, ''),
-                          }))
+                              .filter(
+                                  ([name]) =>
+                                      !invalidFontProps.some((prop) =>
+                                          name.includes(prop)
+                                      )
+                              )
+                              .map(([name, value]) => ({
+                                  name:
+                                      name.charAt(0).toUpperCase() +
+                                      name.slice(1),
+                                  slug: name.toLowerCase(),
+                                  fontFamily: value.replace(/['"]/g, ''),
+                              })),
+                          // Process Tailwind config font families if available
+                          ...(resolvedTailwindConfig?.theme?.fontFamily
+                              ? processFontFamilies(
+                                    resolvedTailwindConfig.theme.fontFamily
+                                )
+                              : []),
+                      ]
                     : undefined;
 
-                // Process font sizes
+                // Process font sizes from either @theme block or Tailwind config
                 const fontSizeEntries = !disableTailwindFontSizes
-                    ? extractVariables(patterns.FONT_SIZE, themeContent)
-                          .filter(([name]) => !name.includes('line-height'))
-                          .map(([name, value]) => ({
-                              name,
-                              slug: name.toLowerCase(),
-                              size: value,
-                          }))
+                    ? [
+                          // Process @theme block font sizes if available
+                          ...extractVariables(patterns.FONT_SIZE, themeContent)
+                              .filter(([name]) => !name.includes('line-height'))
+                              .map(([name, value]) => ({
+                                  name:
+                                      name.charAt(0).toUpperCase() +
+                                      name.slice(1),
+                                  slug: name.toLowerCase(),
+                                  size: value,
+                              })),
+                          // Process Tailwind config font sizes if available
+                          ...(resolvedTailwindConfig?.theme?.fontSize
+                              ? processFontSizes(
+                                    resolvedTailwindConfig.theme.fontSize
+                                )
+                              : []),
+                      ]
                     : undefined;
 
                 // Build theme.json

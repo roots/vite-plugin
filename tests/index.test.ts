@@ -235,6 +235,7 @@ describe('wordpressPlugin', () => {
 });
 
 describe('wordpressThemeJson', () => {
+    const mockTailwindConfigPath = './tailwind.config.js';
     const mockTailwindConfig = {
         theme: {
             colors: {
@@ -265,8 +266,18 @@ describe('wordpressThemeJson', () => {
     };
 
     beforeEach(() => {
-        vi.mocked(fs.readFileSync).mockReturnValue(
-            JSON.stringify(mockBaseThemeJson)
+        vi.mocked(fs.readFileSync).mockImplementation(
+            (path: fs.PathOrFileDescriptor) => {
+                if (
+                    typeof path === 'string' &&
+                    path.includes('tailwind.config.js')
+                ) {
+                    return `module.exports = ${JSON.stringify(
+                        mockTailwindConfig
+                    )}`;
+                }
+                return JSON.stringify(mockBaseThemeJson);
+            }
         );
 
         vi.mocked(path.resolve).mockImplementation((...paths: string[]) =>
@@ -280,7 +291,7 @@ describe('wordpressThemeJson', () => {
 
     it('should process CSS variables from @theme block', () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
         });
 
         const cssContent = `
@@ -304,9 +315,19 @@ describe('wordpressThemeJson', () => {
         );
     });
 
+    it('should handle invalid tailwind config path', async () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: './nonexistent.config.js',
+        });
+
+        await expect((plugin.configResolved as any)?.()).rejects.toThrow(
+            /Failed to load Tailwind config/
+        );
+    });
+
     it('should handle numeric color shades', () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
         });
 
         const cssContent = `
@@ -358,7 +379,7 @@ describe('wordpressThemeJson', () => {
 
     it('should respect disable flags', () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
             disableTailwindColors: true,
             disableTailwindFonts: true,
             disableTailwindFontSizes: true,
@@ -385,7 +406,7 @@ describe('wordpressThemeJson', () => {
 
     it('should handle invalid font properties', () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
         });
 
         const cssContent = `
@@ -405,7 +426,7 @@ describe('wordpressThemeJson', () => {
 
         expect(fontFamilies).toHaveLength(1);
         expect(fontFamilies[0]).toEqual({
-            name: 'inter',
+            name: 'Inter',
             slug: 'inter',
             fontFamily: 'Inter',
         });
@@ -413,7 +434,7 @@ describe('wordpressThemeJson', () => {
 
     it('should handle missing @theme block', () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
         });
 
         const cssContent = `
@@ -431,7 +452,7 @@ describe('wordpressThemeJson', () => {
 
     it('should handle malformed @theme block', async () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
         });
 
         const cssContent = `
@@ -450,7 +471,7 @@ describe('wordpressThemeJson', () => {
 
     it('should handle shade labels', () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
             shadeLabels: {
                 '50': 'Lightest',
                 '100': 'Lighter',
@@ -508,7 +529,7 @@ describe('wordpressThemeJson', () => {
 
     it('should format shades without labels as Color (shade)', () => {
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
             // No shade labels configured
         });
 
@@ -595,7 +616,7 @@ describe('wordpressThemeJson', () => {
         );
 
         const plugin = wordpressThemeJson({
-            tailwindConfig: mockTailwindConfig,
+            tailwindConfig: mockTailwindConfigPath,
         });
 
         const cssContent = `
