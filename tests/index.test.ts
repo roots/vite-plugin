@@ -426,7 +426,7 @@ describe('wordpressThemeJson', () => {
 
         expect(fontFamilies).toHaveLength(1);
         expect(fontFamilies[0]).toEqual({
-            name: 'Inter',
+            name: 'inter',
             slug: 'inter',
             fontFamily: 'Inter',
         });

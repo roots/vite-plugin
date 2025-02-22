@@ -566,10 +566,9 @@ function processFontFamilies(
 ): Array<{ name: string; slug: string; fontFamily: string }> {
     return Object.entries(fonts).map(([name, value]) => {
         const fontFamily = Array.isArray(value) ? value.join(', ') : value;
-        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
 
         return {
-            name: capitalizedName,
+            name: name,
             slug: name.toLowerCase(),
             fontFamily,
         };
@@ -583,12 +582,11 @@ function processFontSizes(
     sizes: Record<string, string | [string, Record<string, string>]>
 ): Array<{ name: string; slug: string; size: string }> {
     return Object.entries(sizes).map(([name, value]) => {
-        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
         // Handle both simple sizes and sizes with line height config
         const size = Array.isArray(value) ? value[0] : value;
 
         return {
-            name: capitalizedName,
+            name: name,
             slug: name.toLowerCase(),
             size,
         };
@@ -893,9 +891,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                                       )
                               )
                               .map(([name, value]) => ({
-                                  name:
-                                      name.charAt(0).toUpperCase() +
-                                      name.slice(1),
+                                  name: name,
                                   slug: name.toLowerCase(),
                                   fontFamily: value.replace(/['"]/g, ''),
                               })),
@@ -915,9 +911,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                           ...extractVariables(patterns.FONT_SIZE, themeContent)
                               .filter(([name]) => !name.includes('line-height'))
                               .map(([name, value]) => ({
-                                  name:
-                                      name.charAt(0).toUpperCase() +
-                                      name.slice(1),
+                                  name: name,
                                   slug: name.toLowerCase(),
                                   size: value,
                               })),
