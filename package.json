@@ -9,9 +9,9 @@
   ],
   "contributors": [
     {
-        "email": "brandon@tendency.me",
-        "name": "Brandon Nifong",
-        "url": "https://github.com/log1x"
+      "email": "brandon@tendency.me",
+      "name": "Brandon Nifong",
+      "url": "https://github.com/log1x"
     },
     {
       "email": "ben@benword.com",
@@ -27,7 +27,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/roots/vite-plugin.git"
+    "url": "git+https://github.com/roots/vite-plugin.git"
   },
   "type": "module",
   "exports": {
