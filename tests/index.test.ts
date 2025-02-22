@@ -184,6 +184,7 @@ describe('wordpressPlugin', () => {
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
             }) as InputOptions;
+
             const external = result.external as (id: string) => boolean;
 
             expect(external('@wordpress/element')).toBe(true);
@@ -195,6 +196,7 @@ describe('wordpressPlugin', () => {
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
             }) as InputOptions;
+
             const external = result.external as (id: string) => boolean;
 
             expect(external('react')).toBe(false);
@@ -266,6 +268,7 @@ describe('wordpressThemeJson', () => {
         vi.mocked(fs.readFileSync).mockReturnValue(
             JSON.stringify(mockBaseThemeJson)
         );
+
         vi.mocked(path.resolve).mockImplementation((...paths: string[]) =>
             paths.join('/')
         );
@@ -321,27 +324,31 @@ describe('wordpressThemeJson', () => {
         (plugin.generateBundle as any).call({ emitFile });
 
         const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Red (500)',
             slug: 'red-500',
             color: '#ef4444',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Blue (100)',
             slug: 'blue-100',
             color: '#e0f2fe',
         });
-        // Non-shaded colors should be capitalized
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Primary',
             slug: 'primary',
             color: '#000000',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'White',
             slug: 'white',
             color: '#ffffff',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Black',
             slug: 'black',
@@ -370,6 +377,7 @@ describe('wordpressThemeJson', () => {
         (plugin.generateBundle as any).call({ emitFile });
 
         const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
         expect(themeJson.settings.color?.palette).toBeUndefined();
         expect(themeJson.settings.typography.fontFamilies).toBeUndefined();
         expect(themeJson.settings.typography.fontSizes).toBeUndefined();
@@ -466,27 +474,31 @@ describe('wordpressThemeJson', () => {
         (plugin.generateBundle as any).call({ emitFile });
 
         const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Lightest Blue',
             slug: 'blue-50',
             color: '#f0f9ff',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Lighter Blue',
             slug: 'blue-100',
             color: '#e0f2fe',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Default Blue',
             slug: 'blue-500',
             color: '#3b82f6',
         });
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Darkest Blue',
             slug: 'blue-900',
             color: '#1e3a8a',
         });
-        // Non-shaded colors should be capitalized
+
         expect(themeJson.settings.color.palette).toContainEqual({
             name: 'Primary',
             slug: 'primary',
