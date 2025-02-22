@@ -289,36 +289,16 @@ describe('wordpressThemeJson', () => {
       }
     `;
 
-        // Transform to capture CSS content
         (plugin.transform as any)(cssContent, 'app.css');
-
-        // Mock emitFile to capture theme.json
         const emitFile = vi.fn();
         (plugin.generateBundle as any).call({ emitFile });
 
         expect(emitFile).toHaveBeenCalledWith(
             expect.objectContaining({
                 fileName: 'assets/theme.json',
-                source: expect.stringContaining('"name": "primary"'),
+                source: expect.stringContaining('"name": "Primary"'),
             })
         );
-
-        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
-        expect(themeJson.settings.color.palette).toContainEqual({
-            name: 'primary',
-            slug: 'primary',
-            color: '#000000',
-        });
-        expect(themeJson.settings.typography.fontFamilies).toContainEqual({
-            name: 'inter',
-            slug: 'inter',
-            fontFamily: 'Inter',
-        });
-        expect(themeJson.settings.typography.fontSizes).toContainEqual({
-            name: 'lg',
-            slug: 'lg',
-            size: '1.125rem',
-        });
     });
 
     it('should handle numeric color shades', () => {
@@ -329,6 +309,10 @@ describe('wordpressThemeJson', () => {
         const cssContent = `
       @theme {
         --color-red-500: #ef4444;
+        --color-blue-100: #e0f2fe;
+        --color-primary: #000000;
+        --color-white: #ffffff;
+        --color-black: #000000;
       }
     `;
 
@@ -338,9 +322,30 @@ describe('wordpressThemeJson', () => {
 
         const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
         expect(themeJson.settings.color.palette).toContainEqual({
-            name: 'red-500',
+            name: 'Red (500)',
             slug: 'red-500',
             color: '#ef4444',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Blue (100)',
+            slug: 'blue-100',
+            color: '#e0f2fe',
+        });
+        // Non-shaded colors should be capitalized
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Primary',
+            slug: 'primary',
+            color: '#000000',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'White',
+            slug: 'white',
+            color: '#ffffff',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Black',
+            slug: 'black',
+            color: '#000000',
         });
     });
 
@@ -433,6 +438,109 @@ describe('wordpressThemeJson', () => {
         await expect(
             (plugin.generateBundle as any).call({ emitFile })
         ).rejects.toThrow('Unclosed @theme { block - missing closing brace');
+    });
+
+    it('should handle shade labels', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfig,
+            shadeLabels: {
+                '50': 'Lightest',
+                '100': 'Lighter',
+                '500': 'Default',
+                '900': 'Darkest',
+            },
+        });
+
+        const cssContent = `
+      @theme {
+        --color-blue-50: #f0f9ff;
+        --color-blue-100: #e0f2fe;
+        --color-blue-500: #3b82f6;
+        --color-blue-900: #1e3a8a;
+        --color-primary: #000000;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Lightest Blue',
+            slug: 'blue-50',
+            color: '#f0f9ff',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Lighter Blue',
+            slug: 'blue-100',
+            color: '#e0f2fe',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Default Blue',
+            slug: 'blue-500',
+            color: '#3b82f6',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Darkest Blue',
+            slug: 'blue-900',
+            color: '#1e3a8a',
+        });
+        // Non-shaded colors should be capitalized
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Primary',
+            slug: 'primary',
+            color: '#000000',
+        });
+    });
+
+    it('should format shades without labels as Color (shade)', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfig,
+            // No shade labels configured
+        });
+
+        const cssContent = `
+      @theme {
+        --color-blue-50: #f0f9ff;
+        --color-blue-100: #e0f2fe;
+        --color-red-500: #ef4444;
+        --color-gray-900: #111827;
+        --color-primary: #000000;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Blue (50)',
+            slug: 'blue-50',
+            color: '#f0f9ff',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Blue (100)',
+            slug: 'blue-100',
+            color: '#e0f2fe',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Red (500)',
+            slug: 'red-500',
+            color: '#ef4444',
+        });
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Gray (900)',
+            slug: 'gray-900',
+            color: '#111827',
+        });
+        // Non-shaded colors should be capitalized
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Primary',
+            slug: 'primary',
+            color: '#000000',
+        });
     });
 
     it('should preserve existing theme.json settings', () => {

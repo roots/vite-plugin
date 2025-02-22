@@ -66,8 +66,8 @@ export default defineConfig({
 
         // Name of the editor iframe element (default: 'editor-canvas')
         iframeName: 'editor-canvas',
-      }
-    })
+      },
+    }),
   ],
 });
 ```
@@ -86,6 +86,12 @@ import { wordpressThemeJson } from '@roots/vite-plugin';
 export default defineConfig({
   plugins: [
     wordpressThemeJson({
+      // Optional: Configure shade labels
+      shadeLabels: {
+        100: 'Lightest',
+        900: 'Darkest',
+      },
+
       // Optional: Disable specific transformations
       disableTailwindColors: false,
       disableTailwindFonts: false,
