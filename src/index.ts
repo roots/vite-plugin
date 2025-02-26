@@ -755,7 +755,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
 
     return {
         name: 'wordpress-theme-json',
-        enforce: 'post',
+        enforce: 'pre',
 
         async configResolved() {
             if (tailwindConfig) {
