@@ -108,3 +108,23 @@ export default defineConfig({
   ],
 });
 ```
+
+By default, Tailwind v4 will only [generate CSS variables](https://tailwindcss.com/docs/theme#generating-all-css-variables) that are discovered in your source files.
+
+To generate the full default Tailwind color palette into your `theme.json`, you can use the `static` theme option when importing Tailwind:
+
+```css
+@import 'tailwindcss' theme(static);
+```
+
+The same applies for customized colors in the `@theme` directive. To ensure your colors get generated, you can use another form of the `static` theme option:
+
+```css
+@theme static {
+  --color-white: #fff;
+  --color-purple: #3f3cbb;
+  --color-midnight: #121063;
+  --color-tahiti: #3ab7bf;
+  --color-bermuda: #78dcca;
+}
+```
