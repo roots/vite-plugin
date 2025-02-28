@@ -42,7 +42,8 @@ When WordPress dependencies are transformed, a manifest containing the required 
 
 The plugin automatically enables CSS Hot Module Replacement (HMR) for the WordPress editor. By default, it will handle CSS updates for any file named `editor.css` without requiring a full page reload.
 
-> **Note:** JavaScript HMR is not supported at this time. JS changes will trigger a full page reload.
+> [!NOTE]
+> JavaScript HMR is not supported at this time. JS changes will trigger a full page reload.
 
 You can customize the HMR behavior in your Vite config:
 
