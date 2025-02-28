@@ -821,17 +821,32 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                           ...extractVariables(patterns.COLOR, themeContent)
                               .filter(([name]) => !name.endsWith('-*'))
                               .map(([name, value]) => {
-                                  const [colorName, shade] = name.split('-');
+                                  const parts = name.split('-');
+                                  const colorName = parts[0];
+                                  const shade =
+                                      parts.length > 1
+                                          ? parts.slice(1).join(' ')
+                                          : undefined;
                                   const capitalizedColor =
                                       colorName.charAt(0).toUpperCase() +
                                       colorName.slice(1);
-                                  const displayName =
-                                      shade && !Number.isNaN(Number(shade))
-                                          ? config.shadeLabels &&
-                                            shade in config.shadeLabels
-                                              ? `${config.shadeLabels[shade]} ${capitalizedColor}`
-                                              : `${capitalizedColor} (${shade})`
-                                          : capitalizedColor;
+                                  const displayName = shade
+                                      ? config.shadeLabels &&
+                                        shade in config.shadeLabels
+                                          ? `${config.shadeLabels[shade]} ${capitalizedColor}`
+                                          : Number.isNaN(Number(shade))
+                                          ? `${capitalizedColor} (${shade
+                                                .split(' ')
+                                                .map(
+                                                    (word) =>
+                                                        word
+                                                            .charAt(0)
+                                                            .toUpperCase() +
+                                                        word.slice(1)
+                                                )
+                                                .join(' ')})`
+                                          : `${capitalizedColor} (${shade})`
+                                      : capitalizedColor;
 
                                   return {
                                       name: displayName,
@@ -844,17 +859,32 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                               ? flattenColors(
                                     resolvedTailwindConfig.theme.colors
                                 ).map(([name, value]) => {
-                                    const [colorName, shade] = name.split('-');
+                                    const parts = name.split('-');
+                                    const colorName = parts[0];
+                                    const shade =
+                                        parts.length > 1
+                                            ? parts.slice(1).join(' ')
+                                            : undefined;
                                     const capitalizedColor =
                                         colorName.charAt(0).toUpperCase() +
                                         colorName.slice(1);
-                                    const displayName =
-                                        shade && !Number.isNaN(Number(shade))
-                                            ? config.shadeLabels &&
-                                              shade in config.shadeLabels
-                                                ? `${config.shadeLabels[shade]} ${capitalizedColor}`
-                                                : `${capitalizedColor} (${shade})`
-                                            : capitalizedColor;
+                                    const displayName = shade
+                                        ? config.shadeLabels &&
+                                          shade in config.shadeLabels
+                                            ? `${config.shadeLabels[shade]} ${capitalizedColor}`
+                                            : Number.isNaN(Number(shade))
+                                            ? `${capitalizedColor} (${shade
+                                                  .split(' ')
+                                                  .map(
+                                                      (word) =>
+                                                          word
+                                                              .charAt(0)
+                                                              .toUpperCase() +
+                                                          word.slice(1)
+                                                  )
+                                                  .join(' ')})`
+                                            : `${capitalizedColor} (${shade})`
+                                        : capitalizedColor;
 
                                     return {
                                         name: displayName,
