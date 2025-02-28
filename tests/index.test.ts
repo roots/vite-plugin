@@ -580,6 +580,51 @@ describe('wordpressThemeJson', () => {
         });
     });
 
+    it('should handle multi-hyphen color names', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --color-fancy-test-example: #123456;
+        --color-button-hover-state: #234567;
+        --color-social-twitter-blue: #1DA1F2;
+        --color-primary: #000000;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Fancy (Test Example)',
+            slug: 'fancy-test-example',
+            color: '#123456',
+        });
+
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Button (Hover State)',
+            slug: 'button-hover-state',
+            color: '#234567',
+        });
+
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Social (Twitter Blue)',
+            slug: 'social-twitter-blue',
+            color: '#1DA1F2',
+        });
+
+        expect(themeJson.settings.color.palette).toContainEqual({
+            name: 'Primary',
+            slug: 'primary',
+            color: '#000000',
+        });
+    });
+
     it('should preserve existing theme.json settings', () => {
         const existingThemeJson = {
             settings: {
