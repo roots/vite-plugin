@@ -399,9 +399,9 @@ describe('wordpressThemeJson', () => {
 
         const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
 
-        expect(themeJson.settings.color?.palette).toBeUndefined();
-        expect(themeJson.settings.typography.fontFamilies).toBeUndefined();
-        expect(themeJson.settings.typography.fontSizes).toBeUndefined();
+        expect(themeJson.settings.color?.palette).toEqual([]);
+        expect(themeJson.settings.typography.fontFamilies).toEqual([]);
+        expect(themeJson.settings.typography.fontSizes).toEqual([]);
     });
 
     it('should handle invalid font properties', () => {
