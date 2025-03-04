@@ -260,7 +260,6 @@ export function wordpressPlugin(
     const hmrConfig = {
         enabled: true,
         editorPattern: /editor/,
-        cssPattern: 'editor.css',
         iframeName: 'editor-canvas',
         ...config.hmr,
     };
@@ -268,42 +267,45 @@ export function wordpressPlugin(
     // HMR code to inject
     const hmrCode = `
 if (import.meta.hot) {
-    import.meta.hot.on('vite:beforeUpdate', (payload) => {
-        const cssUpdates = payload.updates.filter(update => update.type === 'css-update');
+    import.meta.hot.on('vite:beforeUpdate', ({ updates }) => {
+        const editorIframe = document.querySelector('iframe[name="${hmrConfig.iframeName}"]');
+        const editor = editorIframe?.contentDocument;
 
-        if (cssUpdates.length > 0) {
-            const update = cssUpdates[0];
-
-            // Find the iframe
-            const editorIframe = document.querySelector('iframe[name="${hmrConfig.iframeName}"]');
-            if (!editorIframe?.contentDocument) {
-                window.location.reload();
-                return;
-            }
-
-            // Find the existing style tag in the iframe
-            const styles = editorIframe.contentDocument.getElementsByTagName('style');
-            let editorStyle = null;
-            for (const style of styles) {
-                if (style.textContent.includes('${hmrConfig.cssPattern}')) {
-                    editorStyle = style;
-                    break;
-                }
-            }
-
-            if (!editorStyle) {
-                window.location.reload();
-                return;
-            }
-
-            // Update the style content with new import and cache-busting timestamp
-            const timestamp = Date.now();
-            editorStyle.textContent = \`@import url('\${window.__vite_client_url}\${update.path}?t=\${timestamp}')\`;
+        if (!editor) {
             return;
         }
 
-        // For non-CSS updates, reload
-        window.location.reload();
+        updates.forEach(({ path, type }) => {
+            if (type !== 'css-update') {
+                return;
+            }
+
+            const key = path.split('?')[0];
+
+            editor.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                if (!link.href.includes(key)) {
+                    return;
+                }
+
+                const updated = link.href.split('?')[0] + '?direct&t=' + Date.now();
+
+                link.href = updated;
+            });
+
+            editor.querySelectorAll('style').forEach(style => {
+                if (!style.textContent.includes(key)) {
+                    return;
+                }
+
+                const importRegex = new RegExp(\`(@import\\\\s*(?:url\\\\(['"]?|['"]))(.*?\${key}[^'"\\\\)]*?)(?:\\\\?[^'"\\\\)]*)?(['"]?\\\\))\`, 'g');
+
+                style.textContent = style.textContent.replace(importRegex, (_, prefix, importPath, suffix) => {
+                    const updated = importPath.split('?')[0];
+
+                    return prefix + updated + '?direct&t=' + Date.now() + suffix;
+                });
+            });
+        });
     });
 }`;
 
