@@ -961,33 +961,56 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     settings: {
                         ...baseThemeJson.settings,
                         color: disableTailwindColors
-                            ? undefined
+                            ? baseThemeJson.settings?.color
                             : {
                                   ...baseThemeJson.settings?.color,
                                   palette: [
                                       ...(baseThemeJson.settings?.color
                                           ?.palette || []),
                                       ...(colorEntries || []),
-                                  ],
+                                  ].filter(
+                                      (entry, index, self) =>
+                                          index ===
+                                          self.findIndex(
+                                              (e) => e.slug === entry.slug
+                                          )
+                                  ),
                               },
                         typography: {
                             ...baseThemeJson.settings?.typography,
-                            defaultFontSizes: false,
-                            customFontSize: false,
+                            defaultFontSizes:
+                                baseThemeJson.settings?.typography
+                                    ?.defaultFontSizes ?? false,
+                            customFontSize:
+                                baseThemeJson.settings?.typography
+                                    ?.customFontSize ?? false,
                             fontFamilies: disableTailwindFonts
-                                ? undefined
+                                ? baseThemeJson.settings?.typography
+                                      ?.fontFamilies
                                 : [
                                       ...(baseThemeJson.settings?.typography
                                           ?.fontFamilies || []),
                                       ...(fontFamilyEntries || []),
-                                  ],
+                                  ].filter(
+                                      (entry, index, self) =>
+                                          index ===
+                                          self.findIndex(
+                                              (e) => e.slug === entry.slug
+                                          )
+                                  ),
                             fontSizes: disableTailwindFontSizes
-                                ? undefined
+                                ? baseThemeJson.settings?.typography?.fontSizes
                                 : [
                                       ...(baseThemeJson.settings?.typography
                                           ?.fontSizes || []),
                                       ...(fontSizeEntries || []),
-                                  ],
+                                  ].filter(
+                                      (entry, index, self) =>
+                                          index ===
+                                          self.findIndex(
+                                              (e) => e.slug === entry.slug
+                                          )
+                                  ),
                         },
                     },
                 };
