@@ -1,6 +1,6 @@
 {
   "name": "@roots/vite-plugin",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A Vite plugin for working with WordPress.",
   "keywords": [
     "wordpress",
