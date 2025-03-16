@@ -696,4 +696,179 @@ describe('wordpressThemeJson', () => {
             size: '1rem',
         });
     });
+
+    it('should handle font labels', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+            fontLabels: {
+                inter: 'Inter Font',
+                sans: 'System Sans',
+            },
+        });
+
+        const cssContent = `
+      @theme {
+        --font-inter: "Inter";
+        --font-sans: "system-ui";
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.typography.fontFamilies).toContainEqual({
+            name: 'Inter Font',
+            slug: 'inter',
+            fontFamily: 'Inter',
+        });
+
+        expect(themeJson.settings.typography.fontFamilies).toContainEqual({
+            name: 'System Sans',
+            slug: 'sans',
+            fontFamily: 'system-ui',
+        });
+    });
+
+    it('should handle font size labels', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+            fontSizeLabels: {
+                sm: 'Small',
+                lg: 'Large',
+                '2xs': 'Extra Extra Small',
+            },
+        });
+
+        const cssContent = `
+      @theme {
+        --text-sm: 0.875rem;
+        --text-lg: 1.125rem;
+        --text-2xs: 0.625rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.typography.fontSizes).toContainEqual({
+            name: 'Small',
+            slug: 'sm',
+            size: '0.875rem',
+        });
+
+        expect(themeJson.settings.typography.fontSizes).toContainEqual({
+            name: 'Large',
+            slug: 'lg',
+            size: '1.125rem',
+        });
+
+        expect(themeJson.settings.typography.fontSizes).toContainEqual({
+            name: 'Extra Extra Small',
+            slug: '2xs',
+            size: '0.625rem',
+        });
+    });
+
+    it('should handle missing font and font size labels', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --font-inter: "Inter";
+        --text-2xs: 0.625rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.typography.fontFamilies).toContainEqual({
+            name: 'inter',
+            slug: 'inter',
+            fontFamily: 'Inter',
+        });
+
+        expect(themeJson.settings.typography.fontSizes).toContainEqual({
+            name: '2xs',
+            slug: '2xs',
+            size: '0.625rem',
+        });
+    });
+
+    it('should sort font sizes from smallest to largest', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --text-4xl: 2.25rem;
+        --text-sm: 0.875rem;
+        --text-base: 1rem;
+        --text-xs: 0.75rem;
+        --text-2xl: 1.5rem;
+        --text-lg: 1.125rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const fontSizes = themeJson.settings.typography.fontSizes;
+
+        // Verify the order is correct
+        expect(fontSizes.map((f: { size: string }) => f.size)).toEqual([
+            '0.75rem', // xs
+            '0.875rem', // sm
+            '1rem', // base
+            '1.125rem', // lg
+            '1.5rem', // 2xl
+            '2.25rem', // 4xl
+        ]);
+    });
+
+    it('should handle sorting of mixed units', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --text-px: 16px;
+        --text-em: 1em;
+        --text-rem: 1rem;
+        --text-small: 12px;
+        --text-large: 1.5rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const fontSizes = themeJson.settings.typography.fontSizes;
+
+        // Verify the order is correct (12px = 0.75rem, 16px = 1rem)
+        expect(fontSizes.map((f: { size: string }) => f.size)).toEqual([
+            '12px', // 0.75rem
+            '16px', // 1rem
+            '1em', // 1rem
+            '1rem', // 1rem
+            '1.5rem', // 1.5rem
+        ]);
+    });
 });
