@@ -93,6 +93,20 @@ export default defineConfig({
         900: 'Darkest',
       },
 
+      // Optional: Configure font family labels
+      fontLabels: {
+        sans: 'Sans Serif',
+        mono: 'Monospace',
+        inter: 'Inter Font',
+      },
+
+      // Optional: Configure font size labels
+      fontSizeLabels: {
+        sm: 'Small',
+        base: 'Default',
+        lg: 'Large',
+      },
+
       // Optional: Disable specific transformations
       disableTailwindColors: false,
       disableTailwindFonts: false,
