@@ -26,6 +26,22 @@ interface ThemeJsonPluginOptions {
     shadeLabels?: Record<string, string>;
 
     /**
+     * Labels for font families to use in the WordPress editor.
+     * Keys should be font identifiers (e.g. 'sans', 'mono') and values are the human-readable labels.
+     * For example: { sans: 'Sans Serif', mono: 'Monospace' }
+     * When provided, font names will be formatted as the label instead of the identifier.
+     */
+    fontLabels?: Record<string, string>;
+
+    /**
+     * Labels for font sizes to use in the WordPress editor.
+     * Keys should be size identifiers (e.g. '2xs', 'sm', 'lg') and values are the human-readable labels.
+     * For example: { '2xs': 'Extra Extra Small', sm: 'Small', lg: 'Large' }
+     * When provided, font size names will be formatted as the label instead of the identifier.
+     */
+    fontSizeLabels?: Record<string, string>;
+
+    /**
      * Whether to disable generating color palette entries in theme.json.
      * When true, no color variables will be processed from the @theme block.
      *
@@ -562,13 +578,16 @@ function flattenColors(
  * Processes font families from Tailwind config into theme.json format
  */
 function processFontFamilies(
-    fonts: Record<string, string[] | string>
+    fonts: Record<string, string[] | string>,
+    fontLabels?: Record<string, string>
 ): Array<{ name: string; slug: string; fontFamily: string }> {
     return Object.entries(fonts).map(([name, value]) => {
         const fontFamily = Array.isArray(value) ? value.join(', ') : value;
+        const displayName =
+            fontLabels && name in fontLabels ? fontLabels[name] : name;
 
         return {
-            name: name,
+            name: displayName,
             slug: name.toLowerCase(),
             fontFamily,
         };
@@ -576,17 +595,60 @@ function processFontFamilies(
 }
 
 /**
+ * Converts a CSS size value to a numeric value in rem units for comparison
+ */
+function convertToRem(size: string): number {
+    // Remove any spaces and convert to lowercase
+    size = size.trim().toLowerCase();
+
+    // Convert px to rem (assuming 16px = 1rem)
+    if (size.endsWith('px')) {
+        return parseFloat(size) / 16;
+    }
+
+    // Convert em to rem (they're equivalent)
+    if (size.endsWith('em')) {
+        return parseFloat(size);
+    }
+
+    // Already in rem
+    if (size.endsWith('rem')) {
+        return parseFloat(size);
+    }
+
+    // For other units or invalid values, return 0
+    return 0;
+}
+
+/**
+ * Sorts font sizes from smallest to largest
+ */
+function sortFontSizes(fontSizes: FontSize[]): FontSize[] {
+    return [...fontSizes].sort((a, b) => {
+        const sizeA = convertToRem(a.size);
+        const sizeB = convertToRem(b.size);
+
+        return sizeA - sizeB;
+    });
+}
+
+/**
  * Processes font sizes from Tailwind config into theme.json format
  */
 function processFontSizes(
-    sizes: Record<string, string | [string, Record<string, string>]>
+    sizes: Record<string, string | [string, Record<string, string>]>,
+    fontSizeLabels?: Record<string, string>
 ): Array<{ name: string; slug: string; size: string }> {
     return Object.entries(sizes).map(([name, value]) => {
         // Handle both simple sizes and sizes with line height config
         const size = Array.isArray(value) ? value[0] : value;
+        const displayName =
+            fontSizeLabels && name in fontSizeLabels
+                ? fontSizeLabels[name]
+                : name;
 
         return {
-            name: name,
+            name: displayName,
             slug: name.toLowerCase(),
             size,
         };
@@ -660,6 +722,9 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         baseThemeJsonPath = './theme.json',
         outputPath = 'assets/theme.json',
         cssFile = 'app.css',
+        shadeLabels,
+        fontLabels,
+        fontSizeLabels,
     } = config;
 
     let cssContent: string | null = null;
@@ -831,9 +896,8 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                                       colorName.charAt(0).toUpperCase() +
                                       colorName.slice(1);
                                   const displayName = shade
-                                      ? config.shadeLabels &&
-                                        shade in config.shadeLabels
-                                          ? `${config.shadeLabels[shade]} ${capitalizedColor}`
+                                      ? shadeLabels && shade in shadeLabels
+                                          ? `${shadeLabels[shade]} ${capitalizedColor}`
                                           : Number.isNaN(Number(shade))
                                           ? `${capitalizedColor} (${shade
                                                 .split(' ')
@@ -869,9 +933,8 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                                         colorName.charAt(0).toUpperCase() +
                                         colorName.slice(1);
                                     const displayName = shade
-                                        ? config.shadeLabels &&
-                                          shade in config.shadeLabels
-                                            ? `${config.shadeLabels[shade]} ${capitalizedColor}`
+                                        ? shadeLabels && shade in shadeLabels
+                                            ? `${shadeLabels[shade]} ${capitalizedColor}`
                                             : Number.isNaN(Number(shade))
                                             ? `${capitalizedColor} (${shade
                                                   .split(' ')
@@ -907,6 +970,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     'stretch',
                 ];
 
+                // Process font families from either @theme block or Tailwind config
                 const fontFamilyEntries = !disableTailwindFonts
                     ? [
                           // Process @theme block font families if available
@@ -920,15 +984,22 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                                           name.includes(prop)
                                       )
                               )
-                              .map(([name, value]) => ({
-                                  name: name,
-                                  slug: name.toLowerCase(),
-                                  fontFamily: value.replace(/['"]/g, ''),
-                              })),
+                              .map(([name, value]) => {
+                                  const displayName =
+                                      fontLabels && name in fontLabels
+                                          ? fontLabels[name]
+                                          : name;
+                                  return {
+                                      name: displayName,
+                                      slug: name.toLowerCase(),
+                                      fontFamily: value.replace(/['"]/g, ''),
+                                  };
+                              }),
                           // Process Tailwind config font families if available
                           ...(resolvedTailwindConfig?.theme?.fontFamily
                               ? processFontFamilies(
-                                    resolvedTailwindConfig.theme.fontFamily
+                                    resolvedTailwindConfig.theme.fontFamily,
+                                    fontLabels
                                 )
                               : []),
                       ]
@@ -940,15 +1011,22 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                           // Process @theme block font sizes if available
                           ...extractVariables(patterns.FONT_SIZE, themeContent)
                               .filter(([name]) => !name.includes('line-height'))
-                              .map(([name, value]) => ({
-                                  name: name,
-                                  slug: name.toLowerCase(),
-                                  size: value,
-                              })),
+                              .map(([name, value]) => {
+                                  const displayName =
+                                      fontSizeLabels && name in fontSizeLabels
+                                          ? fontSizeLabels[name]
+                                          : name;
+                                  return {
+                                      name: displayName,
+                                      slug: name.toLowerCase(),
+                                      size: value,
+                                  };
+                              }),
                           // Process Tailwind config font sizes if available
                           ...(resolvedTailwindConfig?.theme?.fontSize
                               ? processFontSizes(
-                                    resolvedTailwindConfig.theme.fontSize
+                                    resolvedTailwindConfig.theme.fontSize,
+                                    fontSizeLabels
                                 )
                               : []),
                       ]
@@ -1000,16 +1078,18 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                                   ),
                             fontSizes: disableTailwindFontSizes
                                 ? baseThemeJson.settings?.typography?.fontSizes
-                                : [
-                                      ...(baseThemeJson.settings?.typography
-                                          ?.fontSizes || []),
-                                      ...(fontSizeEntries || []),
-                                  ].filter(
-                                      (entry, index, self) =>
-                                          index ===
-                                          self.findIndex(
-                                              (e) => e.slug === entry.slug
-                                          )
+                                : sortFontSizes(
+                                      [
+                                          ...(baseThemeJson.settings?.typography
+                                              ?.fontSizes || []),
+                                          ...(fontSizeEntries || []),
+                                      ].filter(
+                                          (entry, index, self) =>
+                                              index ===
+                                              self.findIndex(
+                                                  (e) => e.slug === entry.slug
+                                              )
+                                      )
                                   ),
                         },
                     },
