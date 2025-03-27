@@ -40,7 +40,7 @@ When WordPress dependencies are transformed, a manifest containing the required 
 
 ### Editor HMR Support
 
-The plugin automatically enables CSS Hot Module Replacement (HMR) for the WordPress editor. By default, it will handle CSS updates for any file named `editor.css` without requiring a full page reload.
+The plugin automatically enables CSS Hot Module Replacement (HMR) for the WordPress editor.
 
 > [!NOTE]
 > JavaScript HMR is not supported at this time. JS changes will trigger a full page reload.
@@ -61,9 +61,6 @@ export default defineConfig({
 
         // Pattern to match editor entry points (default: /editor/)
         editorPattern: /editor/,
-
-        // Pattern to match editor CSS files (default: 'editor.css')
-        cssPattern: 'editor.css',
 
         // Name of the editor iframe element (default: 'editor-canvas')
         iframeName: 'editor-canvas',
