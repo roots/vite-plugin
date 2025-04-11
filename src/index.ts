@@ -388,7 +388,8 @@ if (import.meta.hot) {
         },
 
         transform(code: string, id: string) {
-            if (!extensions.some((ext) => id.endsWith(ext))) return null;
+            const cleanId = id.split('?')[0];
+            if (!extensions.some((ext) => cleanId.endsWith(ext))) return null;
 
             let transformedCode = code;
 
