@@ -883,9 +883,10 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
 
     async function generateThemeJson(): Promise<ThemeJson | undefined> {
         try {
-            const baseThemeJson = JSON.parse(
-                fs.readFileSync(path.resolve(baseThemeJsonPath), 'utf8')
-            ) as ThemeJson;
+            const baseThemeJsonPathResolved = path.resolve(baseThemeJsonPath);
+            const baseThemeJsonExists = fs.existsSync(
+                baseThemeJsonPathResolved
+            );
 
             // Extract theme content if CSS is available
             let themeContent: string | null = null;
@@ -894,20 +895,28 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                 themeContent = extractThemeContent(cssContent);
             } else {
                 const cssPath = resolveCssPath(cssFile); // Already handles `isDev`
-                console.log('[theme.json] Checking for CSS at:', cssPath);
                 if (fs.existsSync(cssPath)) {
                     const fileContent = fs.readFileSync(cssPath, 'utf8');
                     themeContent = extractThemeContent(fileContent);
                 }
             }
 
-            // If no @theme block and no Tailwind config, nothing to do
-            if (!themeContent && !resolvedTailwindConfig) {
+            if (
+                !themeContent &&
+                !resolvedTailwindConfig &&
+                !baseThemeJsonExists
+            ) {
                 console.warn(
-                    '[theme.json] No @theme block or Tailwind config found nothing to generate.'
+                    '[theme.json] No @theme block, Tailwind config, or base theme.json — skipping generation.'
                 );
                 return;
             }
+
+            const baseThemeJson = baseThemeJsonExists
+                ? (JSON.parse(
+                      fs.readFileSync(path.resolve(baseThemeJsonPath), 'utf8')
+                  ) as ThemeJson)
+                : ({ settings: { typography: {} } } as ThemeJson);
 
             /**
              * Helper to extract CSS variables using a regex pattern
@@ -1218,7 +1227,6 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     `[theme.json] Could not find in-memory CSS asset matching: ${baseName}-*.css`
                 );
                 const fallbackPath = path.resolve('public/build', cssFile);
-                console.log('[theme.json] Checking for CSS at:', fallbackPath);
 
                 try {
                     cssContent = await fs.promises.readFile(
@@ -1283,6 +1291,26 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                 );
                 server.ws.send({ type: 'full-reload' });
             };
+
+            server.httpServer?.once('listening', async () => {
+                const fallbackPath = resolveCssPath(cssFile);
+
+                if (fs.existsSync(fallbackPath)) {
+                    cssContent = await fs.promises.readFile(
+                        fallbackPath,
+                        'utf8'
+                    );
+                    const themeJson = await generateThemeJson();
+
+                    if (themeJson) {
+                        await writeThemeJsonToDisk(
+                            themeJson,
+                            outputPath,
+                            config.onGenerated
+                        );
+                    }
+                }
+            });
 
             server.watcher.on('change', async (changedPath) => {
                 if (allWatchedPaths.includes(path.resolve(changedPath))) {
