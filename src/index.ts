@@ -3,9 +3,10 @@ import {
     defaultRequestToHandle,
 } from '@wordpress/dependency-extraction-webpack-plugin/lib/util.js';
 import type { Plugin as VitePlugin } from 'vite';
-import type { InputOptions } from 'rollup';
+import type { InputOptions, OutputAsset } from 'rollup';
 import fs from 'fs';
 import path from 'path';
+import glob from 'fast-glob';
 
 interface ThemeJsonPluginOptions {
     /**
@@ -513,6 +514,11 @@ interface ThemeJsonConfig extends ThemeJsonPluginOptions {
      * @default 'app.css'
      */
     cssFile?: string;
+
+    /**
+     * Optional callback called after theme.json is written to disk.
+     */
+    onGenerated?: (themeJson: ThemeJson) => void;
 }
 
 interface TailwindTheme {
@@ -683,6 +689,47 @@ async function loadTailwindConfig(configPath: string): Promise<TailwindConfig> {
 }
 
 /**
+ * Resolves the path to the output directory relative to public/build.
+ *
+ * @param outputPath The relative path to the output directory.
+ * @returns The absolute path to the output directory.
+ */
+function resolveOutputPath(outputPath: string): string {
+    return path.resolve('public/build', outputPath.replace(/^\.?\//, ''));
+}
+
+/**
+ * Writes the generated theme.json to disk.
+ *
+ * @param themeJson The theme.json object to write.
+ * @param outputPath The path to write the theme.json file to.
+ * @param onGenerated A callback function to execute after the file is generated.
+ */
+async function writeThemeJsonToDisk(
+    themeJson: ThemeJson,
+    outputPath: string,
+    onGenerated?: (json: ThemeJson) => void
+) {
+    const outFile = resolveOutputPath(outputPath);
+    const outDir = path.dirname(outFile);
+
+    try {
+        await fs.promises.mkdir(outDir, { recursive: true });
+        await fs.promises.writeFile(
+            outFile,
+            JSON.stringify(themeJson, null, 2),
+            'utf8'
+        );
+    } catch (err) {
+        console.error('[theme.json] Failed to write file:', err);
+    }
+
+    if (typeof onGenerated === 'function') {
+        onGenerated(themeJson);
+    }
+}
+
+/**
  * Creates a Vite plugin that generates a WordPress theme.json file from Tailwind CSS variables.
  * This allows theme.json settings to stay in sync with your Tailwind design tokens.
  *
@@ -730,11 +777,24 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         fontSizeLabels,
     } = config;
 
+    let isDev = false;
+
     let cssContent: string | null = null;
     let resolvedTailwindConfig: TailwindConfig | undefined;
 
     if (tailwindConfig !== undefined && typeof tailwindConfig !== 'string') {
         throw new Error('tailwindConfig must be a string path or undefined');
+    }
+
+    /**
+     * Resolves the path to the CSS file, prefixing it with resources/css when running in dev mode.
+     *
+     * @param cssFile The path to the css file relative to resources/css.
+     * @returns The absolute path to the css file adjusted for whether running in dev or after building.
+     */
+    function resolveCssPath(cssFile: string): string {
+        const baseDir = isDev ? 'resources/css' : 'public/build';
+        return path.resolve(baseDir, cssFile.replace(/^\.?\//, ''));
     }
 
     /**
@@ -821,11 +881,298 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         throw new Error(`Unclosed ${blockType} block - missing closing brace`);
     }
 
+    async function generateThemeJson(): Promise<ThemeJson | undefined> {
+        try {
+            const baseThemeJsonPathResolved = path.resolve(baseThemeJsonPath);
+            const baseThemeJsonExists = fs.existsSync(
+                baseThemeJsonPathResolved
+            );
+
+            // Extract theme content if CSS is available
+            let themeContent: string | null = null;
+
+            if (cssContent) {
+                themeContent = extractThemeContent(cssContent);
+            } else {
+                const cssPath = resolveCssPath(cssFile); // Already handles `isDev`
+                if (fs.existsSync(cssPath)) {
+                    const fileContent = fs.readFileSync(cssPath, 'utf8');
+                    themeContent = extractThemeContent(fileContent);
+                }
+            }
+
+            if (
+                !themeContent &&
+                !resolvedTailwindConfig &&
+                !baseThemeJsonExists
+            ) {
+                console.warn(
+                    '[theme.json] No @theme block, Tailwind config, or base theme.json — skipping generation.'
+                );
+                return;
+            }
+
+            const baseThemeJson = baseThemeJsonExists
+                ? (JSON.parse(
+                      fs.readFileSync(path.resolve(baseThemeJsonPath), 'utf8')
+                  ) as ThemeJson)
+                : ({ settings: { typography: {} } } as ThemeJson);
+
+            /**
+             * Helper to extract CSS variables using a regex pattern
+             */
+            const extractVariables = (
+                regex: RegExp,
+                content: string | null
+            ) => {
+                if (!content) return [];
+
+                const variables: Array<[string, string]> = [];
+                let match: RegExpExecArray | null;
+
+                while ((match = regex.exec(content)) !== null) {
+                    const [, name, value] = match;
+
+                    if (name && value) variables.push([name, value.trim()]);
+                }
+
+                return variables;
+            };
+
+            const patterns = {
+                COLOR: /--color-([^:]+):\s*([^;}]+)[;}]?/g,
+                FONT_FAMILY: /--font-([^:]+):\s*([^;}]+)[;}]?/g,
+                FONT_SIZE: /--text-([^:]+):\s*([^;}]+)[;}]?/g,
+            } as const;
+
+            // Process colors from either @theme block or Tailwind config
+            const colorEntries = !disableTailwindColors
+                ? [
+                      // Process @theme block colors if available
+                      ...extractVariables(patterns.COLOR, themeContent)
+                          .filter(([name]) => !name.endsWith('-*'))
+                          .map(([name, value]) => {
+                              const parts = name.split('-');
+                              const colorName = parts[0];
+                              const shade =
+                                  parts.length > 1
+                                      ? parts.slice(1).join(' ')
+                                      : undefined;
+                              const capitalizedColor =
+                                  colorName.charAt(0).toUpperCase() +
+                                  colorName.slice(1);
+                              const displayName = shade
+                                  ? shadeLabels && shade in shadeLabels
+                                      ? `${shadeLabels[shade]} ${capitalizedColor}`
+                                      : Number.isNaN(Number(shade))
+                                      ? `${capitalizedColor} (${shade
+                                            .split(' ')
+                                            .map(
+                                                (word) =>
+                                                    word
+                                                        .charAt(0)
+                                                        .toUpperCase() +
+                                                    word.slice(1)
+                                            )
+                                            .join(' ')})`
+                                      : `${capitalizedColor} (${shade})`
+                                  : capitalizedColor;
+
+                              return {
+                                  name: displayName,
+                                  slug: name.toLowerCase(),
+                                  color: value,
+                              };
+                          }),
+                      // Process Tailwind config colors if available
+                      ...(resolvedTailwindConfig?.theme?.colors
+                          ? flattenColors(
+                                resolvedTailwindConfig.theme.colors
+                            ).map(([name, value]) => {
+                                const parts = name.split('-');
+                                const colorName = parts[0];
+                                const shade =
+                                    parts.length > 1
+                                        ? parts.slice(1).join(' ')
+                                        : undefined;
+                                const capitalizedColor =
+                                    colorName.charAt(0).toUpperCase() +
+                                    colorName.slice(1);
+                                const displayName = shade
+                                    ? shadeLabels && shade in shadeLabels
+                                        ? `${shadeLabels[shade]} ${capitalizedColor}`
+                                        : Number.isNaN(Number(shade))
+                                        ? `${capitalizedColor} (${shade
+                                              .split(' ')
+                                              .map(
+                                                  (word) =>
+                                                      word
+                                                          .charAt(0)
+                                                          .toUpperCase() +
+                                                      word.slice(1)
+                                              )
+                                              .join(' ')})`
+                                        : `${capitalizedColor} (${shade})`
+                                    : capitalizedColor;
+
+                                return {
+                                    name: displayName,
+                                    slug: name.toLowerCase(),
+                                    color: value,
+                                };
+                            })
+                          : []),
+                  ]
+                : undefined;
+
+            const invalidFontProps = [
+                'feature-settings',
+                'variation-settings',
+                'family',
+                'size',
+                'smoothing',
+                'style',
+                'weight',
+                'stretch',
+            ];
+
+            // Process font families from either @theme block or Tailwind config
+            const fontFamilyEntries = !disableTailwindFonts
+                ? [
+                      // Process @theme block font families if available
+                      ...extractVariables(patterns.FONT_FAMILY, themeContent)
+                          .filter(
+                              ([name]) =>
+                                  !invalidFontProps.some((prop) =>
+                                      name.includes(prop)
+                                  )
+                          )
+                          .map(([name, value]) => {
+                              const displayName =
+                                  fontLabels && name in fontLabels
+                                      ? fontLabels[name]
+                                      : name;
+                              return {
+                                  name: displayName,
+                                  slug: name.toLowerCase(),
+                                  fontFamily: value.replace(/['"]/g, ''),
+                              };
+                          }),
+                      // Process Tailwind config font families if available
+                      ...(resolvedTailwindConfig?.theme?.fontFamily
+                          ? processFontFamilies(
+                                resolvedTailwindConfig.theme.fontFamily,
+                                fontLabels
+                            )
+                          : []),
+                  ]
+                : undefined;
+
+            // Process font sizes from either @theme block or Tailwind config
+            const fontSizeEntries = !disableTailwindFontSizes
+                ? [
+                      // Process @theme block font sizes if available
+                      ...extractVariables(patterns.FONT_SIZE, themeContent)
+                          .filter(([name]) => !name.includes('line-height'))
+                          .map(([name, value]) => {
+                              const displayName =
+                                  fontSizeLabels && name in fontSizeLabels
+                                      ? fontSizeLabels[name]
+                                      : name;
+                              return {
+                                  name: displayName,
+                                  slug: name.toLowerCase(),
+                                  size: value,
+                              };
+                          }),
+                      // Process Tailwind config font sizes if available
+                      ...(resolvedTailwindConfig?.theme?.fontSize
+                          ? processFontSizes(
+                                resolvedTailwindConfig.theme.fontSize,
+                                fontSizeLabels
+                            )
+                          : []),
+                  ]
+                : undefined;
+
+            // Build theme.json
+            const themeJson: ThemeJson = {
+                __processed__: 'This file was generated using Vite',
+                ...baseThemeJson,
+                settings: {
+                    ...baseThemeJson.settings,
+                    color: disableTailwindColors
+                        ? baseThemeJson.settings?.color
+                        : {
+                              ...baseThemeJson.settings?.color,
+                              palette: [
+                                  ...(baseThemeJson.settings?.color?.palette ||
+                                      []),
+                                  ...(colorEntries || []),
+                              ].filter(
+                                  (entry, index, self) =>
+                                      index ===
+                                      self.findIndex(
+                                          (e) => e.slug === entry.slug
+                                      )
+                              ),
+                          },
+                    typography: {
+                        ...baseThemeJson.settings?.typography,
+                        defaultFontSizes:
+                            baseThemeJson.settings?.typography
+                                ?.defaultFontSizes ?? false,
+                        customFontSize:
+                            baseThemeJson.settings?.typography
+                                ?.customFontSize ?? false,
+                        fontFamilies: disableTailwindFonts
+                            ? baseThemeJson.settings?.typography?.fontFamilies
+                            : [
+                                  ...(baseThemeJson.settings?.typography
+                                      ?.fontFamilies || []),
+                                  ...(fontFamilyEntries || []),
+                              ].filter(
+                                  (entry, index, self) =>
+                                      index ===
+                                      self.findIndex(
+                                          (e) => e.slug === entry.slug
+                                      )
+                              ),
+                        fontSizes: disableTailwindFontSizes
+                            ? baseThemeJson.settings?.typography?.fontSizes
+                            : sortFontSizes(
+                                  [
+                                      ...(baseThemeJson.settings?.typography
+                                          ?.fontSizes || []),
+                                      ...(fontSizeEntries || []),
+                                  ].filter(
+                                      (entry, index, self) =>
+                                          index ===
+                                          self.findIndex(
+                                              (e) => e.slug === entry.slug
+                                          )
+                                  )
+                              ),
+                    },
+                },
+            };
+
+            delete themeJson.__preprocessed__;
+
+            return themeJson;
+        } catch (error) {
+            console.error('Failed to generate theme.json:', error);
+            return undefined;
+        }
+    }
+
     return {
         name: 'wordpress-theme-json',
         enforce: 'pre',
 
-        async configResolved() {
+        async configResolved(viteConfig) {
+            isDev = viteConfig.command === 'serve';
+
             if (tailwindConfig) {
                 resolvedTailwindConfig = await loadTailwindConfig(
                     tailwindConfig
@@ -833,281 +1180,146 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
             }
         },
 
-        transform(code: string, id: string) {
-            if (id.includes(cssFile)) {
+        transform(code, id) {
+            const normalizedCssFile = resolveCssPath(cssFile);
+
+            const resolvedId = path.resolve(id);
+
+            // Handle vite adding ?direct to the end of the file name
+            const resolvedIdWithoutQuery = resolvedId.split('?')[0];
+
+            if (
+                resolvedIdWithoutQuery === normalizedCssFile ||
+                resolvedIdWithoutQuery.endsWith(normalizedCssFile)
+            ) {
                 cssContent = code;
+
+                if (isDev) {
+                    generateThemeJson().then((themeJson) => {
+                        if (themeJson) {
+                            writeThemeJsonToDisk(
+                                themeJson,
+                                outputPath,
+                                config.onGenerated
+                            );
+                        }
+                    });
+                }
             }
 
             return null;
         },
 
-        async generateBundle() {
-            try {
-                const baseThemeJson = JSON.parse(
-                    fs.readFileSync(path.resolve(baseThemeJsonPath), 'utf8')
-                ) as ThemeJson;
+        async generateBundle(_, bundle) {
+            const baseName = path.basename(cssFile, '.css');
 
-                // Extract theme content if CSS is available
-                const themeContent = cssContent
-                    ? extractThemeContent(cssContent)
-                    : null;
+            const cssAsset = Object.values(bundle).find(
+                (asset): asset is OutputAsset =>
+                    asset.type === 'asset' &&
+                    asset.fileName.includes(baseName) &&
+                    asset.fileName.endsWith('.css')
+            );
 
-                // If no @theme block and no Tailwind config, nothing to do
-                if (!themeContent && !resolvedTailwindConfig) return;
+            if (cssAsset && typeof cssAsset.source === 'string') {
+                cssContent = cssAsset.source;
+            } else {
+                console.warn(
+                    `[theme.json] Could not find in-memory CSS asset matching: ${baseName}-*.css`
+                );
+                const fallbackPath = path.resolve('public/build', cssFile);
 
-                /**
-                 * Helper to extract CSS variables using a regex pattern
-                 */
-                const extractVariables = (
-                    regex: RegExp,
-                    content: string | null
-                ) => {
-                    if (!content) return [];
-
-                    const variables: Array<[string, string]> = [];
-                    let match: RegExpExecArray | null;
-
-                    while ((match = regex.exec(content)) !== null) {
-                        const [, name, value] = match;
-
-                        if (name && value) variables.push([name, value.trim()]);
-                    }
-
-                    return variables;
-                };
-
-                const patterns = {
-                    COLOR: /--color-([^:]+):\s*([^;}]+)[;}]?/g,
-                    FONT_FAMILY: /--font-([^:]+):\s*([^;}]+)[;}]?/g,
-                    FONT_SIZE: /--text-([^:]+):\s*([^;}]+)[;}]?/g,
-                } as const;
-
-                // Process colors from either @theme block or Tailwind config
-                const colorEntries = !disableTailwindColors
-                    ? [
-                          // Process @theme block colors if available
-                          ...extractVariables(patterns.COLOR, themeContent)
-                              .filter(([name]) => !name.endsWith('-*'))
-                              .map(([name, value]) => {
-                                  const parts = name.split('-');
-                                  const colorName = parts[0];
-                                  const shade =
-                                      parts.length > 1
-                                          ? parts.slice(1).join(' ')
-                                          : undefined;
-                                  const capitalizedColor =
-                                      colorName.charAt(0).toUpperCase() +
-                                      colorName.slice(1);
-                                  const displayName = shade
-                                      ? shadeLabels && shade in shadeLabels
-                                          ? `${shadeLabels[shade]} ${capitalizedColor}`
-                                          : Number.isNaN(Number(shade))
-                                          ? `${capitalizedColor} (${shade
-                                                .split(' ')
-                                                .map(
-                                                    (word) =>
-                                                        word
-                                                            .charAt(0)
-                                                            .toUpperCase() +
-                                                        word.slice(1)
-                                                )
-                                                .join(' ')})`
-                                          : `${capitalizedColor} (${shade})`
-                                      : capitalizedColor;
-
-                                  return {
-                                      name: displayName,
-                                      slug: name.toLowerCase(),
-                                      color: value,
-                                  };
-                              }),
-                          // Process Tailwind config colors if available
-                          ...(resolvedTailwindConfig?.theme?.colors
-                              ? flattenColors(
-                                    resolvedTailwindConfig.theme.colors
-                                ).map(([name, value]) => {
-                                    const parts = name.split('-');
-                                    const colorName = parts[0];
-                                    const shade =
-                                        parts.length > 1
-                                            ? parts.slice(1).join(' ')
-                                            : undefined;
-                                    const capitalizedColor =
-                                        colorName.charAt(0).toUpperCase() +
-                                        colorName.slice(1);
-                                    const displayName = shade
-                                        ? shadeLabels && shade in shadeLabels
-                                            ? `${shadeLabels[shade]} ${capitalizedColor}`
-                                            : Number.isNaN(Number(shade))
-                                            ? `${capitalizedColor} (${shade
-                                                  .split(' ')
-                                                  .map(
-                                                      (word) =>
-                                                          word
-                                                              .charAt(0)
-                                                              .toUpperCase() +
-                                                          word.slice(1)
-                                                  )
-                                                  .join(' ')})`
-                                            : `${capitalizedColor} (${shade})`
-                                        : capitalizedColor;
-
-                                    return {
-                                        name: displayName,
-                                        slug: name.toLowerCase(),
-                                        color: value,
-                                    };
-                                })
-                              : []),
-                      ]
-                    : undefined;
-
-                const invalidFontProps = [
-                    'feature-settings',
-                    'variation-settings',
-                    'family',
-                    'size',
-                    'smoothing',
-                    'style',
-                    'weight',
-                    'stretch',
-                ];
-
-                // Process font families from either @theme block or Tailwind config
-                const fontFamilyEntries = !disableTailwindFonts
-                    ? [
-                          // Process @theme block font families if available
-                          ...extractVariables(
-                              patterns.FONT_FAMILY,
-                              themeContent
-                          )
-                              .filter(
-                                  ([name]) =>
-                                      !invalidFontProps.some((prop) =>
-                                          name.includes(prop)
-                                      )
-                              )
-                              .map(([name, value]) => {
-                                  const displayName =
-                                      fontLabels && name in fontLabels
-                                          ? fontLabels[name]
-                                          : name;
-                                  return {
-                                      name: displayName,
-                                      slug: name.toLowerCase(),
-                                      fontFamily: value.replace(/['"]/g, ''),
-                                  };
-                              }),
-                          // Process Tailwind config font families if available
-                          ...(resolvedTailwindConfig?.theme?.fontFamily
-                              ? processFontFamilies(
-                                    resolvedTailwindConfig.theme.fontFamily,
-                                    fontLabels
-                                )
-                              : []),
-                      ]
-                    : undefined;
-
-                // Process font sizes from either @theme block or Tailwind config
-                const fontSizeEntries = !disableTailwindFontSizes
-                    ? [
-                          // Process @theme block font sizes if available
-                          ...extractVariables(patterns.FONT_SIZE, themeContent)
-                              .filter(([name]) => !name.includes('line-height'))
-                              .map(([name, value]) => {
-                                  const displayName =
-                                      fontSizeLabels && name in fontSizeLabels
-                                          ? fontSizeLabels[name]
-                                          : name;
-                                  return {
-                                      name: displayName,
-                                      slug: name.toLowerCase(),
-                                      size: value,
-                                  };
-                              }),
-                          // Process Tailwind config font sizes if available
-                          ...(resolvedTailwindConfig?.theme?.fontSize
-                              ? processFontSizes(
-                                    resolvedTailwindConfig.theme.fontSize,
-                                    fontSizeLabels
-                                )
-                              : []),
-                      ]
-                    : undefined;
-
-                // Build theme.json
-                const themeJson: ThemeJson = {
-                    __processed__: 'This file was generated using Vite',
-                    ...baseThemeJson,
-                    settings: {
-                        ...baseThemeJson.settings,
-                        color: disableTailwindColors
-                            ? baseThemeJson.settings?.color
-                            : {
-                                  ...baseThemeJson.settings?.color,
-                                  palette: [
-                                      ...(baseThemeJson.settings?.color
-                                          ?.palette || []),
-                                      ...(colorEntries || []),
-                                  ].filter(
-                                      (entry, index, self) =>
-                                          index ===
-                                          self.findIndex(
-                                              (e) => e.slug === entry.slug
-                                          )
-                                  ),
-                              },
-                        typography: {
-                            ...baseThemeJson.settings?.typography,
-                            defaultFontSizes:
-                                baseThemeJson.settings?.typography
-                                    ?.defaultFontSizes ?? false,
-                            customFontSize:
-                                baseThemeJson.settings?.typography
-                                    ?.customFontSize ?? false,
-                            fontFamilies: disableTailwindFonts
-                                ? baseThemeJson.settings?.typography
-                                      ?.fontFamilies
-                                : [
-                                      ...(baseThemeJson.settings?.typography
-                                          ?.fontFamilies || []),
-                                      ...(fontFamilyEntries || []),
-                                  ].filter(
-                                      (entry, index, self) =>
-                                          index ===
-                                          self.findIndex(
-                                              (e) => e.slug === entry.slug
-                                          )
-                                  ),
-                            fontSizes: disableTailwindFontSizes
-                                ? baseThemeJson.settings?.typography?.fontSizes
-                                : sortFontSizes(
-                                      [
-                                          ...(baseThemeJson.settings?.typography
-                                              ?.fontSizes || []),
-                                          ...(fontSizeEntries || []),
-                                      ].filter(
-                                          (entry, index, self) =>
-                                              index ===
-                                              self.findIndex(
-                                                  (e) => e.slug === entry.slug
-                                              )
-                                      )
-                                  ),
-                        },
-                    },
-                };
-
-                delete themeJson.__preprocessed__;
-
-                this.emitFile({
-                    type: 'asset',
-                    fileName: outputPath,
-                    source: JSON.stringify(themeJson, null, 2),
-                });
-            } catch (error) {
-                throw error instanceof Error ? error : new Error(String(error));
+                try {
+                    cssContent = await fs.promises.readFile(
+                        fallbackPath,
+                        'utf8'
+                    );
+                } catch {
+                    console.warn(
+                        '[theme.json] No @theme block or Tailwind config found — nothing to generate.'
+                    );
+                    throw new Error(
+                        '[wordpress-theme-json] theme.json generation failed during build'
+                    );
+                }
             }
+
+            const themeJson = await generateThemeJson();
+
+            if (!themeJson) {
+                throw new Error(
+                    '[wordpress-theme-json] theme.json generation failed during build'
+                );
+            }
+
+            this.emitFile({
+                type: 'asset',
+                fileName: outputPath,
+                source: JSON.stringify(themeJson, null, 2),
+            });
+        },
+
+        configureServer(server) {
+            // Resolve full paths to files explicitly configured
+            const cssPathToWatch = resolveCssPath(cssFile);
+            const watchedFiles = [
+                path.resolve(baseThemeJsonPath),
+                tailwindConfig ? path.resolve(tailwindConfig) : null,
+                cssPathToWatch,
+            ].filter(Boolean) as string[];
+
+            // Also watch all .css files in the same folder as the main css file
+            const cssDir = path.dirname(path.resolve(cssFile));
+            const cssFiles = glob.sync('**/*.css', {
+                cwd: cssDir,
+                absolute: true,
+            });
+
+            const allWatchedPaths = [...watchedFiles, ...cssFiles];
+
+            // Register paths with Vite's watcher
+            server.watcher.add(allWatchedPaths);
+
+            // Regenerate theme.json when the CSS file changes
+            const regenerate = async () => {
+                const themeJson = await generateThemeJson();
+                if (!themeJson) return;
+
+                await writeThemeJsonToDisk(
+                    themeJson,
+                    outputPath,
+                    config.onGenerated
+                );
+                server.ws.send({ type: 'full-reload' });
+            };
+
+            server.httpServer?.once('listening', async () => {
+                const fallbackPath = resolveCssPath(cssFile);
+
+                if (fs.existsSync(fallbackPath)) {
+                    cssContent = await fs.promises.readFile(
+                        fallbackPath,
+                        'utf8'
+                    );
+                    const themeJson = await generateThemeJson();
+
+                    if (themeJson) {
+                        await writeThemeJsonToDisk(
+                            themeJson,
+                            outputPath,
+                            config.onGenerated
+                        );
+                    }
+                }
+            });
+
+            server.watcher.on('change', async (changedPath) => {
+                if (allWatchedPaths.includes(path.resolve(changedPath))) {
+                    console.log(
+                        `[theme.json] Re-generating due to change: ${changedPath}`
+                    );
+                    await regenerate();
+                }
+            });
         },
     };
 }
