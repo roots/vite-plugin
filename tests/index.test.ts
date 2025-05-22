@@ -871,4 +871,42 @@ describe('wordpressThemeJson', () => {
             '1.5rem', // 1.5rem
         ]);
     });
+
+    it('should not include text shadow variables as font sizes', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --text-shadow-xs: 0px 1px 1px #0003;
+        --text-shadow-md: 0px 1px 2px #0000001a;
+        --text-lg: 1.125rem;
+        --text-base: 1rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const fontSizes = themeJson.settings.typography.fontSizes;
+
+        expect(fontSizes).toContainEqual({
+            name: 'lg',
+            slug: 'lg',
+            size: '1.125rem',
+        });
+
+        expect(fontSizes).toContainEqual({
+            name: 'base',
+            slug: 'base',
+            size: '1rem',
+        });
+
+        expect(
+            fontSizes.some((f: { slug: string }) => f.slug.includes('shadow'))
+        ).toBe(false);
+    });
 });
