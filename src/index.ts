@@ -1013,7 +1013,11 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     ? [
                           // Process @theme block font sizes if available
                           ...extractVariables(patterns.FONT_SIZE, themeContent)
-                              .filter(([name]) => !name.includes('line-height'))
+                              .filter(
+                                  ([name]) =>
+                                      !name.includes('line-height') &&
+                                      !name.includes('shadow')
+                              )
                               .map(([name, value]) => {
                                   const displayName =
                                       fontSizeLabels && name in fontSizeLabels
