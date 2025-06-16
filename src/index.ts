@@ -1016,6 +1016,8 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                               .filter(
                                   ([name]) =>
                                       !name.includes('line-height') &&
+                                      !name.includes('letter-spacing') &&
+                                      !name.includes('font-weight') &&
                                       !name.includes('shadow')
                               )
                               .map(([name, value]) => {
