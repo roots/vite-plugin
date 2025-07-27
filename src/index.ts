@@ -330,12 +330,11 @@ if (import.meta.hot) {
      * Handles both single and multiple imports with aliases.
      */
     function extractNamedImports(imports: string): string[] {
+        const match = imports.match(/{([^}]+)}/);
         return (
-            imports
-                .match(/{([^}]+)}/)
-                ?.at(1)
+            match?.[1]
                 ?.split(',')
-                .map((s) => s.trim())
+                .map((s: string) => s.trim())
                 .filter(Boolean) ?? []
         );
     }
