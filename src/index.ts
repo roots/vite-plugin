@@ -272,6 +272,9 @@ export function wordpressPlugin(
     const extensions = config.extensions ?? SUPPORTED_EXTENSIONS;
     const dependencies = new Set<string>();
 
+    // Do not rewrite imports or mark these packages as external
+    const exemptPackages = ['@wordpress/icons'];
+
     // HMR configuration with defaults
     const hmrConfig = {
         enabled: true,
@@ -367,13 +370,19 @@ if (import.meta.hot) {
         options(opts: InputOptions) {
             return {
                 ...opts,
-                external: (id: string): boolean =>
-                    typeof id === 'string' && id.startsWith('@wordpress/'),
+                external: (id: string): boolean => {
+                    return (
+                        typeof id === 'string' &&
+                        id.startsWith('@wordpress/') &&
+                        !exemptPackages.includes(id)
+                    );
+                },
             };
         },
 
         resolveId(id: string) {
-            if (!id?.startsWith('@wordpress/')) return null;
+            if (!id?.startsWith('@wordpress/') || exemptPackages.includes(id))
+                return null;
 
             const [external, handle] = [
                 defaultRequestToExternal(id),
@@ -399,6 +408,10 @@ if (import.meta.hot) {
 
             while ((match = importRegex.exec(code)) !== null) {
                 const [fullMatch, imports, pkg] = match;
+
+                if (exemptPackages.includes(`@wordpress/${pkg}`)) {
+                    continue;
+                }
 
                 const external = defaultRequestToExternal(`@wordpress/${pkg}`);
                 const handle = defaultRequestToHandle(`@wordpress/${pkg}`);
