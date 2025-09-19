@@ -272,8 +272,20 @@ export function wordpressPlugin(
     const extensions = config.extensions ?? SUPPORTED_EXTENSIONS;
     const dependencies = new Set<string>();
 
-    // Do not rewrite imports or mark these packages as external
-    const exemptPackages = ['@wordpress/icons'];
+    /**
+    * Do not rewrite imports or mark these packages as external
+    * @see https://github.com/WordPress/gutenberg/blob/trunk/packages/dependency-extraction-webpack-plugin/lib/util.js
+    */
+    const exemptPackages = [
+        '@wordpress/dataviews',
+        '@wordpress/dataviews/wp',
+        '@wordpress/icons',
+        '@wordpress/interface',
+        '@wordpress/sync',
+        '@wordpress/undo-manager',
+        '@wordpress/upload-media',
+        '@wordpress/fields',
+    ];
 
     // HMR configuration with defaults
     const hmrConfig = {

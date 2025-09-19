@@ -231,6 +231,17 @@ describe('wordpressPlugin', () => {
                 })
             );
         });
+
+        it('should not mark exempted WordPress packages as external', () => {
+            const result = (plugin.options as any)({
+                input: 'src/index.ts',
+            }) as InputOptions;
+
+            const external = result.external as (id: string) => boolean;
+
+            expect(external('@wordpress/icons')).toBe(false);
+            expect(external('@wordpress/dataviews')).toBe(false);
+        });
     });
 });
 
