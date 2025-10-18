@@ -1,7 +1,7 @@
 import {
     defaultRequestToExternal,
     defaultRequestToHandle,
-} from '@wordpress/dependency-extraction-webpack-plugin/lib/util.js';
+} from '@wordpress/dependency-extraction-webpack-plugin/lib/util';
 import type { Plugin as VitePlugin } from 'vite';
 import type { InputOptions } from 'rollup';
 import fs from 'fs';
