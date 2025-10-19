@@ -398,12 +398,14 @@ describe('wordpressPlugin', () => {
                 const context = {
                     emitFile,
                     meta: {},
+                    /* eslint-disable @typescript-eslint/no-unused-vars */
                     warn: (_message: string) => {
                         /* intentionally empty for tests */
                     },
                     error: (_message: string) => {
                         /* intentionally empty for tests */
                     },
+                    /* eslint-enable @typescript-eslint/no-unused-vars */
                 };
 
                 plugin.generateBundle.call(
