@@ -38,6 +38,50 @@ Once you've added the plugin, WordPress dependencies referenced in your code wil
 
 When WordPress dependencies are transformed, a manifest containing the required dependencies will be generated called `editor.deps.json`.
 
+### External Mappings for Third-Party Plugins
+
+The plugin can also handle third-party WordPress plugins that expose global JavaScript APIs, such as Advanced Custom Fields (ACF) or WooCommerce. This allows you to import these dependencies in your code while ensuring they're treated as external dependencies and properly enqueued by WordPress.
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite';
+import { wordpressPlugin } from '@roots/vite-plugin';
+
+export default defineConfig({
+  plugins: [
+    wordpressPlugin({
+      externalMappings: {
+        'acf-input': {
+          global: ['acf', 'input'],
+          handle: 'acf-input'
+        },
+        'woocommerce-blocks': {
+          global: ['wc', 'blocks'],
+          handle: 'wc-blocks'
+        }
+      }
+    }),
+  ],
+});
+```
+
+With this configuration, you can import from these packages in your code:
+
+```js
+import { Field, FieldGroup } from 'acf-input';
+import { registerBlockType } from 'woocommerce-blocks';
+```
+
+The plugin will transform these imports into global references:
+
+```js
+const Field = acf.input.Field;
+const FieldGroup = acf.input.FieldGroup;
+const registerBlockType = wc.blocks.registerBlockType;
+```
+
+The `handle` value is added to the dependency manifest (`editor.deps.json`) so WordPress knows to enqueue these scripts before your code runs.
+
 ### Editor HMR Support
 
 The plugin automatically enables CSS Hot Module Replacement (HMR) for the WordPress editor.
