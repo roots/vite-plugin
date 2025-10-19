@@ -192,6 +192,29 @@ const SUPPORTED_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx'] as const;
 type SupportedExtension = (typeof SUPPORTED_EXTENSIONS)[number];
 
 /**
+ * External package mapping configuration
+ */
+interface ExternalMapping {
+    /**
+     * Global path where the package is exposed.
+     * For example, ['acf', 'input'] maps to window.acf.input
+     *
+     * @example ['acf', 'input']
+     * @example ['wc', 'blocks']
+     */
+    global: string[];
+
+    /**
+     * WordPress script handle for dependency enqueueing.
+     * This is the handle used in wp_enqueue_script.
+     *
+     * @example 'acf-input'
+     * @example 'wc-blocks'
+     */
+    handle: string;
+}
+
+/**
  * Configuration for the WordPress plugin
  */
 interface WordPressPluginConfig {
@@ -201,6 +224,26 @@ interface WordPressPluginConfig {
      * @default ['.js', '.jsx', '.ts', '.tsx']
      */
     extensions?: SupportedExtension[];
+
+    /**
+     * Additional external mappings for non-WordPress packages that expose globals.
+     * Useful for third-party WordPress plugins like ACF, WooCommerce, etc.
+     *
+     * @example
+     * ```ts
+     * {
+     *   'acf-input': {
+     *     global: ['acf', 'input'],
+     *     handle: 'acf-input'
+     *   },
+     *   'woocommerce-blocks': {
+     *     global: ['wc', 'blocks'],
+     *     handle: 'wc-blocks'
+     *   }
+     * }
+     * ```
+     */
+    externalMappings?: Record<string, ExternalMapping>;
 
     /**
      * HMR configuration for the WordPress editor
@@ -270,6 +313,7 @@ export function wordpressPlugin(
     config: WordPressPluginConfig = {}
 ): VitePlugin {
     const extensions = config.extensions ?? SUPPORTED_EXTENSIONS;
+    const externalMappings = config.externalMappings ?? {};
     const dependencies = new Set<string>();
 
     /**
@@ -383,8 +427,15 @@ if (import.meta.hot) {
             return {
                 ...opts,
                 external: (id: string): boolean => {
+                    if (typeof id !== 'string') return false;
+
+                    // Check if it's a custom external mapping
+                    if (id in externalMappings) {
+                        return true;
+                    }
+
+                    // Check if it's a WordPress package
                     return (
-                        typeof id === 'string' &&
                         id.startsWith('@wordpress/') &&
                         !exemptPackages.includes(id)
                     );
@@ -393,6 +444,14 @@ if (import.meta.hot) {
         },
 
         resolveId(id: string) {
+            // Handle custom external mappings
+            if (id in externalMappings) {
+                const mapping = externalMappings[id];
+                dependencies.add(mapping.handle);
+                return { id, external: true };
+            }
+
+            // Handle WordPress packages
             if (!id?.startsWith('@wordpress/') || exemptPackages.includes(id))
                 return null;
 
@@ -412,6 +471,65 @@ if (import.meta.hot) {
             if (!extensions.some((ext) => cleanId.endsWith(ext))) return null;
 
             let transformedCode = code;
+
+            // Handle custom external mappings
+            for (const [packageName, mapping] of Object.entries(externalMappings)) {
+                const customImportRegex = new RegExp(
+                    `^[\\s\\n]*import[\\s\\n]+(?:([^;'"]+?)[\\s\\n]+from[\\s\\n]+)?['"]${packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"][\\s\\n]*;?`,
+                    'gm'
+                );
+                let match;
+
+                while ((match = customImportRegex.exec(code)) !== null) {
+                    const [fullMatch, imports] = match;
+
+                    // Add dependency
+                    dependencies.add(mapping.handle);
+
+                    // For side-effect only imports, just remove them
+                    if (!imports) {
+                        transformedCode = transformedCode.replace(fullMatch, '');
+                        continue;
+                    }
+
+                    // Handle different import types
+                    let replacement;
+
+                    if (imports.includes('{')) {
+                        // Named imports
+                        replacement = handleNamedReplacement(
+                            extractNamedImports(imports),
+                            mapping.global
+                        );
+                    } else if (imports.includes('*')) {
+                        // Namespace imports
+                        const namespaceAlias =
+                            imports.match(/\*\s+as\s+(\w+)/)?.[1];
+
+                        if (namespaceAlias) {
+                            replacement = `const ${namespaceAlias} = ${mapping.global.join(
+                                '.'
+                            )};`;
+                        }
+                    } else {
+                        // Default imports
+                        const defaultImport = imports.match(/^(\w+)/)?.[1];
+
+                        if (defaultImport) {
+                            replacement = `const ${defaultImport} = ${mapping.global.join(
+                                '.'
+                            )};`;
+                        }
+                    }
+
+                    if (replacement) {
+                        transformedCode = transformedCode.replace(
+                            fullMatch,
+                            replacement
+                        );
+                    }
+                }
+            }
 
             // Handle all WordPress imports
             const importRegex =
