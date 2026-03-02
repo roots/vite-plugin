@@ -49,7 +49,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@wordpress/dependency-extraction-webpack-plugin": "^6.27.0"
+    "@wordpress/dependency-extraction-webpack-plugin": "^6.40.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
