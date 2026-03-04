@@ -770,7 +770,7 @@ describe('wordpressThemeJson', () => {
         });
     });
 
-    it('should handle missing @theme block', () => {
+    it('should still emit theme.json when @theme block is missing', () => {
         const plugin = wordpressThemeJson({
             tailwindConfig: mockTailwindConfigPath,
         });
@@ -785,7 +785,12 @@ describe('wordpressThemeJson', () => {
         const emitFile = vi.fn();
         (plugin.generateBundle as any).call({ emitFile });
 
-        expect(emitFile).not.toHaveBeenCalled();
+        expect(emitFile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'asset',
+                fileName: 'assets/theme.json',
+            })
+        );
     });
 
     it('should handle malformed @theme block', async () => {

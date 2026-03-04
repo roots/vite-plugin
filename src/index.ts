@@ -994,8 +994,9 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     ? extractThemeContent(cssContent)
                     : null;
 
-                // If no @theme block and no Tailwind config, nothing to do
-                if (!themeContent && !resolvedTailwindConfig) return;
+                // Even without Tailwind, always generate theme.json so
+                // the theme_file_path filter in Sage doesn't point to
+                // a non-existent file (passes through the base theme.json)
 
                 /**
                  * Helper to extract CSS variables using a regex pattern
