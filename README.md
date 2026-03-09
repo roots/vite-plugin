@@ -1,11 +1,16 @@
 # Vite Plugin for WordPress
 
-<a href="https://github.com/roots/vite-plugin/blob/main/LICENSE.md"><img alt="MIT License" src="https://img.shields.io/github/license/roots/vite-plugin?color=%23525ddc&style=flat-square"></a>
 <a href="https://www.npmjs.com/package/@roots/vite-plugin"><img alt="npm version" src="https://img.shields.io/npm/v/@roots/vite-plugin.svg?color=%23525ddc&style=flat-square"></a>
+<a href="https://www.npmjs.com/package/@roots/vite-plugin"><img alt="npm downloads" src="https://img.shields.io/npm/dt/@roots/vite-plugin?label=downloads&colorB=2b3072&colorA=525ddc&style=flat-square"></a>
 <a href="https://github.com/roots/vite-plugin/actions/workflows/tests.yml"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/roots/vite-plugin/tests.yml?color=%23525ddc&style=flat-square"></a>
-<a href="https://bsky.app/profile/roots.dev"><img alt="Follow roots.dev on Bluesky" src="https://img.shields.io/badge/follow-@roots.dev-0085ff?logo=bluesky&style=flat-square"></a>
+<a href="https://twitter.com/rootswp"><img alt="Follow Roots" src="https://img.shields.io/badge/follow%20@rootswp-1da1f2?logo=twitter&logoColor=ffffff&message=&style=flat-square"></a>
+<a href="https://github.com/sponsors/roots"><img src="https://img.shields.io/badge/sponsor%20roots-525ddc?logo=github&style=flat-square&logoColor=ffffff&message=" alt="Sponsor Roots"></a>
 
 Here lives a Vite plugin for WordPress development.
+
+## Support us
+
+We're dedicated to pushing modern WordPress development forward through our open source projects, and we need your support to keep building. You can support our work by purchasing [Radicle](https://roots.io/radicle/), our recommended WordPress stack, or by [sponsoring us on GitHub](https://github.com/sponsors/roots). Every contribution directly helps us create better tools for the WordPress ecosystem.
 
 ## Features
 
@@ -184,3 +189,13 @@ The same applies for customized colors in the `@theme` directive. To ensure your
   --color-bermuda: #78dcca;
 }
 ```
+
+## Community
+
+Keep track of development and community news.
+
+- Join us on Discord by [sponsoring us on GitHub](https://github.com/sponsors/roots)
+- Join us on [Roots Discourse](https://discourse.roots.io/)
+- Follow [@rootswp on Twitter](https://twitter.com/rootswp)
+- Follow the [Roots Blog](https://roots.io/blog/)
+- Subscribe to the [Roots Newsletter](https://roots.io/subscribe/)
