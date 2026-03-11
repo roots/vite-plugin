@@ -1164,13 +1164,13 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                 };
 
                 const patterns = {
-                    COLOR: /(?:^|[;{}])\s*--color-([^:]+):\s*([^;}]+)[;}]?/gm,
+                    COLOR: /(?:^|[;{}])\s*--color-([^:]+):\s*([^;}]+)/gm,
                     FONT_FAMILY:
-                        /(?:^|[;{}])\s*--font-([^:]+):\s*([^;}]+)[;}]?/gm,
+                        /(?:^|[;{}])\s*--font-([^:]+):\s*([^;}]+)/gm,
                     FONT_SIZE:
-                        /(?:^|[;{}])\s*--text-([^:]+):\s*([^;}]+)[;}]?/gm,
+                        /(?:^|[;{}])\s*--text-([^:]+):\s*([^;}]+)/gm,
                     BORDER_RADIUS:
-                        /(?:^|[;{}])\s*--radius-([^:]+):\s*([^;}]+)[;}]?/gm,
+                        /(?:^|[;{}])\s*--radius-([^:]+):\s*([^;}]+)/gm,
                 } as const;
 
                 // Process colors from either @theme block or Tailwind config
