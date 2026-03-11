@@ -42,6 +42,14 @@ interface ThemeJsonPluginOptions {
     fontSizeLabels?: Record<string, string>;
 
     /**
+     * Labels for border radius sizes to use in the WordPress editor.
+     * Keys should be size identifiers (e.g. 'sm', 'lg', 'full') and values are the human-readable labels.
+     * For example: { sm: 'Small', lg: 'Large', full: 'Full' }
+     * When provided, border radius names will be formatted as the label instead of the identifier.
+     */
+    borderRadiusLabels?: Record<string, string>;
+
+    /**
      * Whether to disable generating color palette entries in theme.json.
      * When true, no color variables will be processed from the @theme block.
      *
@@ -64,6 +72,14 @@ interface ThemeJsonPluginOptions {
      * @default false
      */
     disableTailwindFontSizes?: boolean;
+
+    /**
+     * Whether to disable generating border radius size entries in theme.json.
+     * When true, no border-radius variables will be processed from the @theme block.
+     *
+     * @default false
+     */
+    disableTailwindBorderRadius?: boolean;
 }
 
 interface ColorPalette {
@@ -126,6 +142,26 @@ interface FontSize {
     size: string;
 }
 
+interface BorderRadiusSize {
+    /**
+     * The human-readable name of the border radius size.
+     * This will be displayed in the WordPress editor.
+     */
+    name: string;
+
+    /**
+     * The machine-readable identifier for the border radius size.
+     * This should be lowercase and URL-safe.
+     */
+    slug: string;
+
+    /**
+     * The CSS border-radius value.
+     * Can be any valid CSS size unit (px, rem, em, etc).
+     */
+    size: string;
+}
+
 interface ThemeJsonSettings {
     /**
      * Color settings including the color palette.
@@ -133,6 +169,25 @@ interface ThemeJsonSettings {
      */
     color?: {
         palette: ColorPalette[];
+    };
+
+    /**
+     * Border settings including radius size presets.
+     * Generated from --radius-* CSS variables in the @theme block.
+     */
+    border?: {
+        /**
+         * Whether to enable border radius controls.
+         */
+        radius?: boolean;
+
+        /**
+         * Available border radius size presets in the editor.
+         * Generated from --radius-* CSS variables.
+         */
+        radiusSizes?: BorderRadiusSize[];
+
+        [key: string]: unknown;
     };
 
     /**
@@ -661,10 +716,12 @@ interface TailwindTheme {
     colors?: Record<string, unknown>;
     fontFamily?: Record<string, string[] | string>;
     fontSize?: Record<string, string | [string, Record<string, string>]>;
+    borderRadius?: Record<string, string>;
     extend?: {
         colors?: Record<string, unknown>;
         fontFamily?: Record<string, string[] | string>;
         fontSize?: Record<string, string | [string, Record<string, string>]>;
+        borderRadius?: Record<string, string>;
     };
 }
 
@@ -691,6 +748,10 @@ function mergeThemeWithExtend(theme: TailwindTheme): TailwindTheme {
         fontSize: {
             ...theme.fontSize,
             ...theme.extend.fontSize,
+        },
+        borderRadius: {
+            ...theme.borderRadius,
+            ...theme.extend.borderRadius,
         },
     };
 }
@@ -801,6 +862,70 @@ function processFontSizes(
 }
 
 /**
+ * Processes border radius sizes from Tailwind config into theme.json format
+ */
+function processBorderRadiusSizes(
+    sizes: Record<string, string>,
+    borderRadiusLabels?: Record<string, string>
+): Array<{ name: string; slug: string; size: string }> {
+    return Object.entries(sizes).filter(([, value]) => isStaticRadiusValue(value)).map(([name, value]) => {
+        const displayName =
+            borderRadiusLabels && name in borderRadiusLabels
+                ? borderRadiusLabels[name]
+                : name;
+
+        return {
+            name: displayName,
+            slug: name.toLowerCase(),
+            size: value,
+        };
+    });
+}
+
+/**
+ * Returns true if the value is a valid CSS border-radius preset value.
+ * Returns false for function-based values (var, clamp, calc) that can
+ * break the WordPress radius preset selector UI.
+ */
+function isStaticRadiusValue(value: string): boolean {
+    return !/\(/.test(value.trim());
+}
+
+/**
+ * Attempts to parse a border-radius size to rem for sorting.
+ * For multi-value radii (e.g. "15px 255px"), parses the first value.
+ * Returns null if the value cannot be parsed.
+ */
+function parseRadiusSizeForSort(size: string): number | null {
+    const firstValue = size.trim().split(/\s+/)[0];
+    const result = convertToRem(firstValue);
+    // convertToRem returns 0 for unrecognized units; distinguish from actual 0
+    if (result === 0 && parseFloat(firstValue) !== 0) return null;
+    return result;
+}
+
+/**
+ * Sorts border radius sizes from smallest to largest.
+ * Unparseable values are placed at the end in their original order.
+ */
+function sortBorderRadiusSizes(
+    sizes: BorderRadiusSize[]
+): BorderRadiusSize[] {
+    return [...sizes].sort((a, b) => {
+        const sizeA = parseRadiusSizeForSort(a.size);
+        const sizeB = parseRadiusSizeForSort(b.size);
+
+        // If both are unparseable, preserve original order
+        if (sizeA === null && sizeB === null) return 0;
+        // Push unparseable values to the end
+        if (sizeA === null) return 1;
+        if (sizeB === null) return -1;
+
+        return sizeA - sizeB;
+    });
+}
+
+/**
  * Loads and resolves the Tailwind configuration from the provided path
  */
 async function loadTailwindConfig(configPath: string): Promise<TailwindConfig> {
@@ -864,12 +989,14 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         disableTailwindColors = false,
         disableTailwindFonts = false,
         disableTailwindFontSizes = false,
+        disableTailwindBorderRadius = false,
         baseThemeJsonPath = './theme.json',
         outputPath = 'assets/theme.json',
         cssFile = 'app.css',
         shadeLabels,
         fontLabels,
         fontSizeLabels,
+        borderRadiusLabels,
     } = config;
 
     let cssContent: string | null = null;
@@ -1023,6 +1150,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     COLOR: /--color-([^:]+):\s*([^;}]+)[;}]?/g,
                     FONT_FAMILY: /--font-([^:]+):\s*([^;}]+)[;}]?/g,
                     FONT_SIZE: /--text-([^:]+):\s*([^;}]+)[;}]?/g,
+                    BORDER_RADIUS: /--radius-([^:]+):\s*([^;}]+)[;}]?/g,
                 } as const;
 
                 // Process colors from either @theme block or Tailwind config
@@ -1184,6 +1312,39 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                       ]
                     : undefined;
 
+                // Process border radius sizes from either @theme block or Tailwind config
+                const borderRadiusEntries = !disableTailwindBorderRadius
+                    ? [
+                          // Process @theme block border radius sizes if available
+                          ...extractVariables(
+                              patterns.BORDER_RADIUS,
+                              themeContent
+                          )
+                              .filter(
+                                  ([, value]) => isStaticRadiusValue(value)
+                              )
+                              .map(([name, value]) => {
+                              const displayName =
+                                  borderRadiusLabels &&
+                                  name in borderRadiusLabels
+                                      ? borderRadiusLabels[name]
+                                      : name;
+                              return {
+                                  name: displayName,
+                                  slug: name.toLowerCase(),
+                                  size: value,
+                              };
+                          }),
+                          // Process Tailwind config border radius if available
+                          ...(resolvedTailwindConfig?.theme?.borderRadius
+                              ? processBorderRadiusSizes(
+                                    resolvedTailwindConfig.theme.borderRadius,
+                                    borderRadiusLabels
+                                )
+                              : []),
+                      ]
+                    : undefined;
+
                 // Build theme.json
                 const themeJson: ThemeJson = {
                     __processed__: 'This file was generated using Vite',
@@ -1244,6 +1405,41 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                                       )
                                   ),
                         },
+                        ...(() => {
+                            if (disableTailwindBorderRadius) {
+                                return baseThemeJson.settings?.border
+                                    ? { border: baseThemeJson.settings.border }
+                                    : {};
+                            }
+                            const mergedRadiusSizes = sortBorderRadiusSizes(
+                                [
+                                    ...(baseThemeJson.settings?.border
+                                        ?.radiusSizes || []),
+                                    ...(borderRadiusEntries || []),
+                                ].filter(
+                                    (entry, index, self) =>
+                                        index ===
+                                        self.findIndex(
+                                            (e) => e.slug === entry.slug
+                                        )
+                                )
+                            );
+                            // Only add radius settings if there are entries
+                            if (mergedRadiusSizes.length === 0) {
+                                return baseThemeJson.settings?.border
+                                    ? { border: baseThemeJson.settings.border }
+                                    : {};
+                            }
+                            return {
+                                border: {
+                                    ...baseThemeJson.settings?.border,
+                                    radius:
+                                        baseThemeJson.settings?.border
+                                            ?.radius ?? true,
+                                    radiusSizes: mergedRadiusSizes,
+                                },
+                            };
+                        })(),
                     },
                 };
 

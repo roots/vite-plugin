@@ -1252,4 +1252,504 @@ describe('wordpressThemeJson', () => {
             fontSizes.some((f: { slug: string }) => f.slug.includes('shadow'))
         ).toBe(false);
     });
+
+    it('should process border radius CSS variables from @theme block', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-sm: 0.125rem;
+        --radius-md: 0.375rem;
+        --radius-lg: 0.5rem;
+        --radius-full: 9999px;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border.radius).toBe(true);
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'sm',
+            slug: 'sm',
+            size: '0.125rem',
+        });
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'lg',
+            slug: 'lg',
+            size: '0.5rem',
+        });
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'full',
+            slug: 'full',
+            size: '9999px',
+        });
+    });
+
+    it('should sort border radius sizes from smallest to largest', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-full: 9999px;
+        --radius-sm: 0.125rem;
+        --radius-lg: 0.5rem;
+        --radius-md: 0.375rem;
+        --radius-xs: 0.0625rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const radiusSizes = themeJson.settings.border.radiusSizes;
+
+        expect(
+            radiusSizes.map((r: { size: string }) => r.size)
+        ).toEqual([
+            '0.0625rem', // xs
+            '0.125rem',  // sm
+            '0.375rem',  // md
+            '0.5rem',    // lg
+            '9999px',    // full
+        ]);
+    });
+
+    it('should handle border radius labels', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+            borderRadiusLabels: {
+                sm: 'Small',
+                md: 'Medium',
+                lg: 'Large',
+                full: 'Full',
+            },
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-sm: 0.125rem;
+        --radius-md: 0.375rem;
+        --radius-lg: 0.5rem;
+        --radius-full: 9999px;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'Small',
+            slug: 'sm',
+            size: '0.125rem',
+        });
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'Full',
+            slug: 'full',
+            size: '9999px',
+        });
+    });
+
+    it('should respect disableTailwindBorderRadius flag', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+            disableTailwindBorderRadius: true,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-sm: 0.125rem;
+        --radius-lg: 0.5rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border).toBeUndefined();
+    });
+
+    it('should deduplicate border radius entries with base theme.json', () => {
+        const existingThemeJson = {
+            settings: {
+                border: {
+                    radius: true,
+                    radiusSizes: [
+                        { name: 'Small', slug: 'sm', size: '0.125rem' },
+                    ],
+                },
+                typography: {
+                    fontFamilies: [],
+                    fontSizes: [],
+                },
+            },
+        };
+
+        vi.mocked(fs.readFileSync).mockReturnValue(
+            JSON.stringify(existingThemeJson)
+        );
+
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-sm: 0.25rem;
+        --radius-lg: 0.5rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const smEntries = themeJson.settings.border.radiusSizes.filter(
+            (r: { slug: string }) => r.slug === 'sm'
+        );
+
+        // Base theme.json entry should win (dedup keeps first)
+        expect(smEntries).toHaveLength(1);
+        expect(smEntries[0].size).toBe('0.125rem');
+    });
+
+    it('should respect base theme.json border.radius: false', () => {
+        const existingThemeJson = {
+            settings: {
+                border: {
+                    radius: false,
+                },
+                typography: {
+                    fontFamilies: [],
+                    fontSizes: [],
+                },
+            },
+        };
+
+        vi.mocked(fs.readFileSync).mockReturnValue(
+            JSON.stringify(existingThemeJson)
+        );
+
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-sm: 0.125rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border.radius).toBe(false);
+    });
+
+    it('should filter out function-based radius values but keep multi-value', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-sm: 0.125rem;
+        --radius-dynamic: var(--custom-radius);
+        --radius-clamped: clamp(0.5rem, 2vw, 1rem);
+        --radius-pill: 15px 255px;
+        --radius-lg: 0.5rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const slugs = themeJson.settings.border.radiusSizes.map(
+            (r: { slug: string }) => r.slug
+        );
+
+        expect(slugs).toContain('sm');
+        expect(slugs).toContain('lg');
+        expect(slugs).toContain('pill');
+        expect(slugs).not.toContain('dynamic');
+        expect(slugs).not.toContain('clamped');
+    });
+
+    it('should sort multi-value radii by first value and zero-value radii correctly', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-lg: 0.5rem;
+        --radius-none: 0px;
+        --radius-pill: 15px 255px;
+        --radius-sm: 0.125rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const slugs = themeJson.settings.border.radiusSizes.map(
+            (r: { slug: string }) => r.slug
+        );
+
+        // 0px should come first, then sm, lg, pill (sorted by first token)
+        expect(slugs.indexOf('none')).toBe(0);
+        expect(slugs.indexOf('sm')).toBeLessThan(slugs.indexOf('lg'));
+        expect(slugs.indexOf('lg')).toBeLessThan(slugs.indexOf('pill'));
+    });
+
+    it('should preserve base border settings without adding radius when no entries exist', () => {
+        const existingThemeJson = {
+            settings: {
+                border: {
+                    color: true,
+                    style: true,
+                    width: true,
+                },
+                typography: {
+                    fontFamilies: [],
+                    fontSizes: [],
+                },
+            },
+        };
+
+        vi.mocked(fs.readFileSync).mockReturnValue(
+            JSON.stringify(existingThemeJson)
+        );
+
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --color-primary: #000000;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border).toEqual({
+            color: true,
+            style: true,
+            width: true,
+        });
+        expect(themeJson.settings.border.radius).toBeUndefined();
+        expect(themeJson.settings.border.radiusSizes).toBeUndefined();
+    });
+
+    it('should not emit border settings when no radius entries exist', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --color-primary: #000000;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border).toBeUndefined();
+    });
+
+    it('should process border radius from Tailwind config', async () => {
+        const tailwindConfigWithRadius = {
+            default: {
+                theme: {
+                    colors: { primary: '#000000' },
+                    fontFamily: { sans: ['system-ui'] },
+                    fontSize: { base: '1rem' },
+                    borderRadius: {
+                        sm: '0.125rem',
+                        md: '0.375rem',
+                        lg: '0.5rem',
+                        full: '9999px',
+                    },
+                },
+            },
+        };
+
+        // Mock dynamic import used by loadTailwindConfig
+        vi.doMock(path.resolve(mockTailwindConfigPath), () => tailwindConfigWithRadius);
+
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+            borderRadiusLabels: { full: 'Full' },
+        });
+
+        // Load Tailwind config via configResolved
+        await (plugin.configResolved as any)?.();
+
+        // No @theme block — radius should come from Tailwind config
+        const cssContent = `.foo { color: red; }`;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'sm',
+            slug: 'sm',
+            size: '0.125rem',
+        });
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'Full',
+            slug: 'full',
+            size: '9999px',
+        });
+    });
+
+    it('should merge theme.extend.borderRadius from Tailwind config', async () => {
+        const tailwindConfigWithExtend = {
+            default: {
+                theme: {
+                    borderRadius: {
+                        sm: '0.125rem',
+                    },
+                    extend: {
+                        borderRadius: {
+                            pill: '9999px',
+                        },
+                    },
+                },
+            },
+        };
+
+        vi.doMock(path.resolve(mockTailwindConfigPath), () => tailwindConfigWithExtend);
+
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        await (plugin.configResolved as any)?.();
+
+        const cssContent = `.foo { color: red; }`;
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'sm',
+            slug: 'sm',
+            size: '0.125rem',
+        });
+        expect(themeJson.settings.border.radiusSizes).toContainEqual({
+            name: 'pill',
+            slug: 'pill',
+            size: '9999px',
+        });
+    });
+
+    it('should preserve existing base border settings when disableTailwindBorderRadius is true', () => {
+        const existingThemeJson = {
+            settings: {
+                border: {
+                    color: true,
+                    style: true,
+                    width: true,
+                    radius: true,
+                    radiusSizes: [
+                        { name: 'Small', slug: 'sm', size: '0.25rem' },
+                    ],
+                },
+                typography: {
+                    fontFamilies: [],
+                    fontSizes: [],
+                },
+            },
+        };
+
+        vi.mocked(fs.readFileSync).mockReturnValue(
+            JSON.stringify(existingThemeJson)
+        );
+
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+            disableTailwindBorderRadius: true,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-lg: 0.5rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        expect(themeJson.settings.border).toEqual(existingThemeJson.settings.border);
+    });
+
+    it('should sort unsupported units to the end', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --radius-sm: 0.125rem;
+        --radius-relative: 50%;
+        --radius-viewport: 5vh;
+        --radius-lg: 0.5rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+        const slugs = themeJson.settings.border.radiusSizes.map(
+            (r: { slug: string }) => r.slug
+        );
+
+        // Parseable values first, unsupported units at end
+        expect(slugs.indexOf('sm')).toBeLessThan(slugs.indexOf('relative'));
+        expect(slugs.indexOf('lg')).toBeLessThan(slugs.indexOf('relative'));
+        expect(slugs.indexOf('lg')).toBeLessThan(slugs.indexOf('viewport'));
+    });
 });
