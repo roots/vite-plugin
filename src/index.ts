@@ -1125,8 +1125,19 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                 // the theme_file_path filter in Sage doesn't point to
                 // a non-existent file (passes through the base theme.json)
 
+                /** CSS-wide keywords that represent resets, not actual values */
+                const cssWideKeywords = [
+                    'initial',
+                    'inherit',
+                    'unset',
+                    'revert',
+                    'revert-layer',
+                ];
+
                 /**
-                 * Helper to extract CSS variables using a regex pattern
+                 * Helper to extract CSS variables using a regex pattern.
+                 * Filters out wildcard namespace resets (e.g. --font-*: initial)
+                 * and CSS-wide keywords.
                  */
                 const extractVariables = (
                     regex: RegExp,
@@ -1140,17 +1151,26 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     while ((match = regex.exec(content)) !== null) {
                         const [, name, value] = match;
 
-                        if (name && value) variables.push([name, value.trim()]);
+                        if (
+                            name &&
+                            value &&
+                            !name.includes('*') &&
+                            !cssWideKeywords.includes(value.trim())
+                        )
+                            variables.push([name, value.trim()]);
                     }
 
                     return variables;
                 };
 
                 const patterns = {
-                    COLOR: /--color-([^:]+):\s*([^;}]+)[;}]?/g,
-                    FONT_FAMILY: /--font-([^:]+):\s*([^;}]+)[;}]?/g,
-                    FONT_SIZE: /--text-([^:]+):\s*([^;}]+)[;}]?/g,
-                    BORDER_RADIUS: /--radius-([^:]+):\s*([^;}]+)[;}]?/g,
+                    COLOR: /(?:^|[;{}])\s*--color-([^:]+):\s*([^;}]+)[;}]?/gm,
+                    FONT_FAMILY:
+                        /(?:^|[;{}])\s*--font-([^:]+):\s*([^;}]+)[;}]?/gm,
+                    FONT_SIZE:
+                        /(?:^|[;{}])\s*--text-([^:]+):\s*([^;}]+)[;}]?/gm,
+                    BORDER_RADIUS:
+                        /(?:^|[;{}])\s*--radius-([^:]+):\s*([^;}]+)[;}]?/gm,
                 } as const;
 
                 // Process colors from either @theme block or Tailwind config
@@ -1158,7 +1178,6 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     ? [
                           // Process @theme block colors if available
                           ...extractVariables(patterns.COLOR, themeContent)
-                              .filter(([name]) => !name.endsWith('-*'))
                               .map(([name, value]) => {
                                   const parts = name.split('-');
                                   const colorName = parts[0];
