@@ -1752,4 +1752,49 @@ describe('wordpressThemeJson', () => {
         expect(slugs.indexOf('lg')).toBeLessThan(slugs.indexOf('relative'));
         expect(slugs.indexOf('lg')).toBeLessThan(slugs.indexOf('viewport'));
     });
+
+    it('should filter out wildcard namespace resets and CSS-wide keywords', () => {
+        const plugin = wordpressThemeJson({
+            tailwindConfig: mockTailwindConfigPath,
+        });
+
+        const cssContent = `
+      @theme {
+        --font-*: initial;
+        --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+        --color-*: initial;
+        --color-primary: #000000;
+        --text-*: inherit;
+        --text-lg: 1.125rem;
+      }
+    `;
+
+        (plugin.transform as any)(cssContent, 'app.css');
+        const emitFile = vi.fn();
+        (plugin.generateBundle as any).call({ emitFile });
+
+        const themeJson = JSON.parse(emitFile.mock.calls[0][0].source);
+
+        // Font families should only contain sans, not wildcard
+        const fontSlugs = themeJson.settings.typography.fontFamilies.map(
+            (f: { slug: string }) => f.slug
+        );
+        expect(fontSlugs).toContain('sans');
+        expect(fontSlugs).not.toContain('*');
+        expect(fontSlugs).toHaveLength(1);
+
+        // Colors should only contain primary, not wildcard
+        const colorSlugs = themeJson.settings.color.palette.map(
+            (c: { slug: string }) => c.slug
+        );
+        expect(colorSlugs).toContain('primary');
+        expect(colorSlugs).toHaveLength(1);
+
+        // Font sizes should only contain lg, not wildcard
+        const sizeSlugs = themeJson.settings.typography.fontSizes.map(
+            (s: { slug: string }) => s.slug
+        );
+        expect(sizeSlugs).toContain('lg');
+        expect(sizeSlugs).toHaveLength(1);
+    });
 });
