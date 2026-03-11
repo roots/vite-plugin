@@ -1,0 +1,66 @@
+{
+  "__preprocessed__": "This marker should be removed",
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "settings": {
+    "color": {
+      "custom": false,
+      "defaultPalette": false,
+      "palette": [
+        {
+          "name": "Brand",
+          "slug": "brand",
+          "color": "#ff6600"
+        },
+        {
+          "name": "Red (500)",
+          "slug": "red-500",
+          "color": "#custom-red"
+        }
+      ]
+    },
+    "typography": {
+      "defaultFontSizes": false,
+      "customFontSize": false,
+      "fontFamilies": [
+        {
+          "name": "Brand Font",
+          "slug": "brand",
+          "fontFamily": "BrandFont, sans-serif"
+        },
+        {
+          "name": "Custom Sans",
+          "slug": "sans",
+          "fontFamily": "CustomSans, sans-serif"
+        }
+      ],
+      "fontSizes": [
+        {
+          "name": "tiny",
+          "slug": "tiny",
+          "size": ".5rem"
+        },
+        {
+          "name": "Custom XL",
+          "slug": "xl",
+          "size": "99rem"
+        }
+      ]
+    },
+    "border": {
+      "radius": true,
+      "radiusSizes": [
+        {
+          "name": "pill",
+          "slug": "pill",
+          "size": "9999px"
+        },
+        {
+          "name": "Custom XL",
+          "slug": "xl",
+          "size": "99rem"
+        }
+      ]
+    }
+  }
+}
