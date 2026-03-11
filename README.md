@@ -187,10 +187,6 @@ To generate the full default Tailwind color palette into your `theme.json`, you 
 @import 'tailwindcss' theme(static);
 ```
 
-#### Border Radius Presets
-
-Tailwind's `--radius-*` CSS variables are automatically extracted into `settings.border.radiusSizes` in theme.json, enabling the border radius preset selector in the WordPress editor.
-
 The same applies for customized colors in the `@theme` directive. To ensure your colors get generated, you can use another form of the `static` theme option:
 
 ```css
