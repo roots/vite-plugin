@@ -1,4 +1,5 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, expect, it, afterAll } from 'vitest';
 import { build } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { wordpressThemeJson } from '../src/index.js';
