@@ -16,7 +16,7 @@ We're dedicated to pushing modern WordPress development forward through our open
 
 - 🔄 Transforms `@wordpress/*` imports into global `wp.*` references
 - 📦 Generates dependency manifest for WordPress enqueuing
-- 🎨 Generates theme.json from Tailwind CSS configuration
+- 🎨 Generates theme.json from Tailwind CSS configuration (colors, fonts, font sizes, border radius)
 - 🔥 Hot Module Replacement (HMR) support for the WordPress editor
 
 ## Installation
@@ -153,10 +153,19 @@ export default defineConfig({
         lg: 'Large',
       },
 
+      // Optional: Configure border radius labels
+      borderRadiusLabels: {
+        sm: 'Small',
+        md: 'Medium',
+        lg: 'Large',
+        full: 'Full',
+      },
+
       // Optional: Disable specific transformations
       disableTailwindColors: false,
       disableTailwindFonts: false,
       disableTailwindFontSizes: false,
+      disableTailwindBorderRadius: false,
 
       // Optional: Configure paths
       baseThemeJsonPath: './theme.json',
@@ -177,6 +186,10 @@ To generate the full default Tailwind color palette into your `theme.json`, you 
 ```css
 @import 'tailwindcss' theme(static);
 ```
+
+#### Border Radius Presets
+
+Tailwind's `--radius-*` CSS variables are automatically extracted into `settings.border.radiusSizes` in theme.json, enabling the border radius preset selector in the WordPress editor.
 
 The same applies for customized colors in the `@theme` directive. To ensure your colors get generated, you can use another form of the `static` theme option:
 
