@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
-import type { Plugin, TransformResult } from 'vite';
-import type { InputOptions } from 'rollup';
+import type { Plugin, TransformResult, Rolldown } from 'vite';
 import fs from 'fs';
 import path from 'path';
 
@@ -201,7 +200,7 @@ describe('wordpressPlugin', () => {
         it('should mark WordPress packages as external', () => {
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
-            }) as InputOptions;
+            }) as Rolldown.InputOptions;
 
             const external = result.external as (id: string) => boolean;
 
@@ -213,7 +212,7 @@ describe('wordpressPlugin', () => {
         it('should not mark non-WordPress packages as external', () => {
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
-            }) as InputOptions;
+            }) as Rolldown.InputOptions;
 
             const external = result.external as (id: string) => boolean;
 
@@ -225,7 +224,7 @@ describe('wordpressPlugin', () => {
         it('should handle non-string input IDs in external check', () => {
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
-            }) as InputOptions;
+            }) as Rolldown.InputOptions;
             const external = result.external as (id: unknown) => boolean;
 
             expect(external(null)).toBe(false);
@@ -238,7 +237,7 @@ describe('wordpressPlugin', () => {
                 input: 'src/index.ts',
                 treeshake: true,
                 preserveEntrySignatures: 'strict' as const,
-            }) as InputOptions;
+            }) as Rolldown.InputOptions;
 
             expect(result).toEqual(
                 expect.objectContaining({
@@ -253,7 +252,7 @@ describe('wordpressPlugin', () => {
         it('should not mark exempted WordPress packages as external', () => {
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
-            }) as InputOptions;
+            }) as Rolldown.InputOptions;
 
             const external = result.external as (id: string) => boolean;
 
@@ -440,7 +439,7 @@ describe('wordpressPlugin', () => {
 
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
-            }) as InputOptions;
+            }) as Rolldown.InputOptions;
 
             const external = result.external as (id: string) => boolean;
 
@@ -459,7 +458,7 @@ describe('wordpressPlugin', () => {
 
             const result = (plugin.options as any)({
                 input: 'src/index.ts',
-            }) as InputOptions;
+            }) as Rolldown.InputOptions;
 
             const external = result.external as (id: string) => boolean;
 

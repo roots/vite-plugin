@@ -2,8 +2,7 @@ import {
     defaultRequestToExternal,
     defaultRequestToHandle,
 } from '@wordpress/dependency-extraction-webpack-plugin/lib/util';
-import type { Plugin as VitePlugin } from 'vite';
-import type { InputOptions } from 'rollup';
+import type { Plugin as VitePlugin, Rolldown } from 'vite';
 import fs from 'fs';
 import path from 'path';
 
@@ -478,7 +477,7 @@ if (import.meta.hot) {
         name: 'wordpress-plugin',
         enforce: 'pre',
 
-        options(opts: InputOptions) {
+        options(opts: Rolldown.InputOptions) {
             return {
                 ...opts,
                 external: (id: string): boolean => {
@@ -665,6 +664,7 @@ if (import.meta.hot) {
             return {
                 code: transformedCode,
                 map: null,
+                moduleType: 'js',
             };
         },
 

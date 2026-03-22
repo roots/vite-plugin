@@ -20,7 +20,7 @@ async function runBuild(pluginOptions = {}, baseThemeJson = 'theme.json') {
             }),
         ],
         build: {
-            rollupOptions: {
+            rolldownOptions: {
                 input: path.join(fixtureDir, 'app.css'),
             },
             outDir,
