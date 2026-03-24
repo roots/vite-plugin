@@ -242,7 +242,7 @@ interface ThemeJson {
 /**
  * Supported file extensions for WordPress imports transformation
  */
-const SUPPORTED_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx'] as const;
+const SUPPORTED_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.mjs'] as const;
 type SupportedExtension = (typeof SUPPORTED_EXTENSIONS)[number];
 
 /**
@@ -275,7 +275,7 @@ interface WordPressPluginConfig {
     /**
      * File extensions to process for WordPress imports.
      *
-     * @default ['.js', '.jsx', '.ts', '.tsx']
+     * @default ['.js', '.jsx', '.ts', '.tsx', '.mjs']
      */
     extensions?: SupportedExtension[];
 
