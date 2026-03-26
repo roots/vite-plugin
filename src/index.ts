@@ -375,14 +375,15 @@ export function wordpressPlugin(
     * @see https://github.com/WordPress/gutenberg/blob/trunk/packages/dependency-extraction-webpack-plugin/lib/util.js
     */
     const exemptPackages = [
+        '@wordpress/admin-ui',
         '@wordpress/dataviews',
         '@wordpress/dataviews/wp',
         '@wordpress/icons',
         '@wordpress/interface',
-        '@wordpress/sync',
         '@wordpress/undo-manager',
-        '@wordpress/upload-media',
         '@wordpress/fields',
+        '@wordpress/views',
+        '@wordpress/ui',
     ];
 
     // HMR configuration with defaults
