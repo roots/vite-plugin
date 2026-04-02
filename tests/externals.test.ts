@@ -22,6 +22,7 @@ vi.mock('@wordpress/dependency-extraction-webpack-plugin/lib/util', () => ({
 }));
 
 import { wordpressPlugin } from '../src/index.js';
+import { shouldInjectHmr, createHmrCode } from '../src/externals/hmr.js';
 
 describe('wordpressPlugin', () => {
     let plugin: Plugin;
@@ -583,5 +584,68 @@ describe('wordpressPlugin', () => {
                 'const useState = wp.element.useState;'
             );
         });
+    });
+});
+
+describe('shouldInjectHmr', () => {
+    it('should return true when enabled and id matches string pattern', () => {
+        expect(shouldInjectHmr('const x = 1;', 'src/editor.ts', {
+            enabled: true,
+            editorPattern: 'editor',
+        })).toBe(true);
+    });
+
+    it('should return true when enabled and id matches regex pattern', () => {
+        expect(shouldInjectHmr('const x = 1;', 'src/editor.ts', {
+            enabled: true,
+            editorPattern: /editor/,
+        })).toBe(true);
+    });
+
+    it('should return false when disabled', () => {
+        expect(shouldInjectHmr('const x = 1;', 'src/editor.ts', {
+            enabled: false,
+            editorPattern: 'editor',
+        })).toBe(false);
+    });
+
+    it('should return false when id does not match pattern', () => {
+        expect(shouldInjectHmr('const x = 1;', 'src/app.ts', {
+            enabled: true,
+            editorPattern: 'editor',
+        })).toBe(false);
+    });
+
+    it('should return false when code already contains HMR snippet', () => {
+        expect(shouldInjectHmr('import.meta.hot.on("vite:beforeUpdate", () => {})', 'src/editor.ts', {
+            enabled: true,
+            editorPattern: 'editor',
+        })).toBe(false);
+    });
+});
+
+describe('createHmrCode', () => {
+    it('should include the iframe name in the generated code', () => {
+        const code = createHmrCode('editor-canvas');
+
+        expect(code).toContain('iframe[name="editor-canvas"]');
+    });
+
+    it('should use a custom iframe name', () => {
+        const code = createHmrCode('my-custom-iframe');
+
+        expect(code).toContain('iframe[name="my-custom-iframe"]');
+    });
+
+    it('should include import.meta.hot guard', () => {
+        const code = createHmrCode('editor-canvas');
+
+        expect(code).toContain('import.meta.hot');
+    });
+
+    it('should listen for vite:beforeUpdate events', () => {
+        const code = createHmrCode('editor-canvas');
+
+        expect(code).toContain('vite:beforeUpdate');
     });
 });

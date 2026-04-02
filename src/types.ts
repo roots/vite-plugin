@@ -200,13 +200,6 @@ export interface WordPressPluginConfig {
         editorPattern?: string | RegExp;
 
         /**
-         * Pattern to match editor CSS files.
-         *
-         * @default 'editor.css'
-         */
-        cssPattern?: string | RegExp;
-
-        /**
          * @default true
          */
         enabled?: boolean;
