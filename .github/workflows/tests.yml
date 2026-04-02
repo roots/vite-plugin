@@ -1,42 +1,42 @@
 name: tests
 
 on:
-  push:
-    branches:
-      - main
-      - '*.x'
-  pull_request:
-  schedule:
-    - cron: '0 0 * * *'
+    push:
+        branches:
+            - main
+            - "*.x"
+    pull_request:
+    schedule:
+        - cron: "0 0 * * *"
 
 jobs:
-  tests:
-    runs-on: ubuntu-latest
+    tests:
+        runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20.x, 22.x, latest]
+        strategy:
+            matrix:
+                node-version: [20.x, 22.x, latest]
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node-version }}
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v6
+              with:
+                  node-version: ${{ matrix.node-version }}
 
-      - name: Install dependencies
-        run: npm install
+            - name: Install dependencies
+              run: npm install
 
-      - name: Check formatting
-        run: npm run format
+            - name: Check formatting
+              run: npm run format
 
-      - name: Lint
-        run: npm run lint
+            - name: Lint
+              run: npm run lint
 
-      - name: Execute tests
-        run: npm test
+            - name: Execute tests
+              run: npm test
 
-      - name: Run build
-        run: npm run build
+            - name: Run build
+              run: npm run build

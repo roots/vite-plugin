@@ -1,14 +1,14 @@
 {
     "name": "@roots/vite-plugin",
     "version": "2.0.2",
-    "type": "module",
-    "license": "MIT",
     "description": "A Vite plugin for working with WordPress.",
     "keywords": [
-        "wordpress",
         "vite",
-        "vite-plugin"
+        "vite-plugin",
+        "wordpress"
     ],
+    "homepage": "https://github.com/roots/vite-plugin",
+    "license": "MIT",
     "contributors": [
         {
             "email": "brandon@tendency.me",
@@ -21,27 +21,24 @@
             "url": "https://github.com/retlehs"
         }
     ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/roots/vite-plugin.git"
+    },
+    "funding": {
+        "type": "github sponsors",
+        "url": "https://github.com/sponsors/roots"
+    },
+    "files": [
+        "/dist"
+    ],
+    "type": "module",
+    "types": "./dist/src/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/src/index.d.ts",
             "default": "./dist/index.js"
         }
-    },
-    "types": "./dist/src/index.d.ts",
-    "files": [
-        "/dist"
-    ],
-    "engines": {
-        "node": "^20.19.0 || >=22.12.0"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/roots/vite-plugin.git"
-    },
-    "homepage": "https://github.com/roots/vite-plugin",
-    "funding": {
-        "type": "github sponsors",
-        "url": "https://github.com/sponsors/roots"
     },
     "scripts": {
         "build": "rm -rf dist && tsc --emitDeclarationOnly && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --packages=external",
@@ -52,9 +49,6 @@
     },
     "dependencies": {
         "@wordpress/dependency-extraction-webpack-plugin": "^6.40.0"
-    },
-    "peerDependencies": {
-        "vite": "^8.0.0"
     },
     "devDependencies": {
         "@tailwindcss/oxide": "^4.1.11",
@@ -67,5 +61,11 @@
         "typescript": "^5.0.0",
         "vite": "^8.0.0",
         "vitest": "^3.0.0"
+    },
+    "peerDependencies": {
+        "vite": "^8.0.0"
+    },
+    "engines": {
+        "node": "^20.19.0 || >=22.12.0"
     }
 }

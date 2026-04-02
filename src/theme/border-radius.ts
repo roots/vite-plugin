@@ -1,5 +1,5 @@
-import type { BorderRadiusSize } from '../types.js';
-import { convertToRem } from '../utils.js';
+import type { BorderRadiusSize } from "../types.js";
+import { convertToRem } from "../utils.js";
 
 /**
  * Determine if the value is a static CSS border-radius value.
@@ -23,9 +23,7 @@ export function parseRadiusSizeForSort(size: string): number | null {
 /**
  * Sort border radius sizes from smallest to largest.
  */
-export function sortBorderRadiusSizes(
-    sizes: BorderRadiusSize[]
-): BorderRadiusSize[] {
+export function sortBorderRadiusSizes(sizes: BorderRadiusSize[]): BorderRadiusSize[] {
     return [...sizes].sort((a, b) => {
         const sizeA = parseRadiusSizeForSort(a.size);
         const sizeB = parseRadiusSizeForSort(b.size);
@@ -43,7 +41,7 @@ export function sortBorderRadiusSizes(
  */
 export function processBorderRadiusSizes(
     sizes: Record<string, string>,
-    borderRadiusLabels?: Record<string, string>
+    borderRadiusLabels?: Record<string, string>,
 ): BorderRadiusSize[] {
     return Object.entries(sizes)
         .filter(([, value]) => isStaticRadiusValue(value))
@@ -64,7 +62,7 @@ export function processBorderRadiusSizes(
 export function resolveBorderRadii(
     variables: Array<[string, string]>,
     tailwindRadius: Record<string, string> | undefined,
-    borderRadiusLabels?: Record<string, string>
+    borderRadiusLabels?: Record<string, string>,
 ): BorderRadiusSize[] {
     const entries: BorderRadiusSize[] = [];
 
@@ -81,9 +79,7 @@ export function resolveBorderRadii(
     }
 
     if (tailwindRadius) {
-        entries.push(
-            ...processBorderRadiusSizes(tailwindRadius, borderRadiusLabels)
-        );
+        entries.push(...processBorderRadiusSizes(tailwindRadius, borderRadiusLabels));
     }
 
     return entries;

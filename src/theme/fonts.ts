@@ -1,15 +1,15 @@
-import type { FontFamily } from '../types.js';
-import { INVALID_FONT_PROPS } from '../constants.js';
+import type { FontFamily } from "../types.js";
+import { INVALID_FONT_PROPS } from "../constants.js";
 
 /**
  * Process Tailwind font families into theme.json format.
  */
 export function processFontFamilies(
     fonts: Record<string, string[] | string>,
-    fontLabels?: Record<string, string>
+    fontLabels?: Record<string, string>,
 ): FontFamily[] {
     return Object.entries(fonts).map(([name, value]) => {
-        const fontFamily = Array.isArray(value) ? value.join(', ') : value;
+        const fontFamily = Array.isArray(value) ? value.join(", ") : value;
         const displayName = fontLabels?.[name] ?? name;
 
         return {
@@ -26,7 +26,7 @@ export function processFontFamilies(
 export function resolveFonts(
     variables: Array<[string, string]>,
     tailwindFonts: Record<string, string[] | string> | undefined,
-    fontLabels?: Record<string, string>
+    fontLabels?: Record<string, string>,
 ): FontFamily[] {
     const entries: FontFamily[] = [];
 
@@ -38,7 +38,7 @@ export function resolveFonts(
         entries.push({
             name: displayName,
             slug: name.toLowerCase(),
-            fontFamily: value.replace(/['"]/g, ''),
+            fontFamily: value.replace(/['"]/g, ""),
         });
     }
 

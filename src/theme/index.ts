@@ -1,15 +1,15 @@
-import type { Plugin as VitePlugin } from 'vite';
-import fs from 'fs';
-import path from 'path';
-import type { ThemeJsonConfig, ThemeJson, TailwindConfig } from '../types.js';
-import { CSS_VARIABLE_PATTERNS } from '../constants.js';
-import { extractThemeContent, extractVariables } from './css-parser.js';
-import { loadTailwindConfig } from './tailwind.js';
-import { resolveColors } from './colors.js';
-import { resolveFonts } from './fonts.js';
-import { resolveFontSizes } from './font-sizes.js';
-import { resolveBorderRadii } from './border-radius.js';
-import { buildSettings } from './settings.js';
+import type { Plugin as VitePlugin } from "vite";
+import fs from "fs";
+import path from "path";
+import type { ThemeJsonConfig, ThemeJson, TailwindConfig } from "../types.js";
+import { CSS_VARIABLE_PATTERNS } from "../constants.js";
+import { extractThemeContent, extractVariables } from "./css-parser.js";
+import { loadTailwindConfig } from "./tailwind.js";
+import { resolveColors } from "./colors.js";
+import { resolveFonts } from "./fonts.js";
+import { resolveFontSizes } from "./font-sizes.js";
+import { resolveBorderRadii } from "./border-radius.js";
+import { buildSettings } from "./settings.js";
 
 /**
  * Generate a WordPress theme.json from Tailwind CSS
@@ -22,9 +22,9 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         disableTailwindFonts = false,
         disableTailwindFontSizes = false,
         disableTailwindBorderRadius = false,
-        baseThemeJsonPath = './theme.json',
-        outputPath = 'assets/theme.json',
-        cssFile = 'app.css',
+        baseThemeJsonPath = "./theme.json",
+        outputPath = "assets/theme.json",
+        cssFile = "app.css",
         shadeLabels,
         fontLabels,
         fontSizeLabels,
@@ -34,18 +34,17 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
     let cssContent: string | null = null;
     let resolvedTailwindConfig: TailwindConfig | undefined;
 
-    if (tailwindConfig !== undefined && typeof tailwindConfig !== 'string') {
-        throw new Error('tailwindConfig must be a string path or undefined');
+    if (tailwindConfig !== undefined && typeof tailwindConfig !== "string") {
+        throw new Error("tailwindConfig must be a string path or undefined");
     }
 
     return {
-        name: 'wordpress-theme-json',
-        enforce: 'pre',
+        name: "wordpress-theme-json",
+        enforce: "pre",
 
         async configResolved() {
             if (tailwindConfig) {
-                resolvedTailwindConfig =
-                    await loadTailwindConfig(tailwindConfig);
+                resolvedTailwindConfig = await loadTailwindConfig(tailwindConfig);
             }
         },
 
@@ -60,34 +59,23 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         async generateBundle() {
             try {
                 const baseThemeJson = JSON.parse(
-                    fs.readFileSync(
-                        path.resolve(baseThemeJsonPath),
-                        'utf8'
-                    )
+                    fs.readFileSync(path.resolve(baseThemeJsonPath), "utf8"),
                 ) as ThemeJson;
 
-                const themeContent = cssContent
-                    ? extractThemeContent(cssContent)
-                    : null;
+                const themeContent = cssContent ? extractThemeContent(cssContent) : null;
 
                 const theme = resolvedTailwindConfig?.theme;
 
                 // Extract CSS variables from @theme block
-                const colorVars = extractVariables(
-                    CSS_VARIABLE_PATTERNS.COLOR,
-                    themeContent
-                );
-                const fontVars = extractVariables(
-                    CSS_VARIABLE_PATTERNS.FONT_FAMILY,
-                    themeContent
-                );
+                const colorVars = extractVariables(CSS_VARIABLE_PATTERNS.COLOR, themeContent);
+                const fontVars = extractVariables(CSS_VARIABLE_PATTERNS.FONT_FAMILY, themeContent);
                 const fontSizeVars = extractVariables(
                     CSS_VARIABLE_PATTERNS.FONT_SIZE,
-                    themeContent
+                    themeContent,
                 );
                 const borderRadiusVars = extractVariables(
                     CSS_VARIABLE_PATTERNS.BORDER_RADIUS,
-                    themeContent
+                    themeContent,
                 );
 
                 // Resolve entries from both sources
@@ -100,25 +88,16 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                     : undefined;
 
                 const fontSizes = !disableTailwindFontSizes
-                    ? resolveFontSizes(
-                          fontSizeVars,
-                          theme?.fontSize,
-                          fontSizeLabels
-                      )
+                    ? resolveFontSizes(fontSizeVars, theme?.fontSize, fontSizeLabels)
                     : undefined;
 
                 const borderRadii = !disableTailwindBorderRadius
-                    ? resolveBorderRadii(
-                          borderRadiusVars,
-                          theme?.borderRadius,
-                          borderRadiusLabels
-                      )
+                    ? resolveBorderRadii(borderRadiusVars, theme?.borderRadius, borderRadiusLabels)
                     : undefined;
 
                 // Build theme.json
                 const themeJson: ThemeJson = {
-                    __processed__:
-                        'This file was generated using Vite',
+                    __processed__: "This file was generated using Vite",
                     ...baseThemeJson,
                     settings: buildSettings({
                         baseSettings: baseThemeJson.settings,
@@ -138,14 +117,12 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                 delete themeJson.__preprocessed__;
 
                 this.emitFile({
-                    type: 'asset',
+                    type: "asset",
                     fileName: outputPath,
                     source: JSON.stringify(themeJson, null, 2),
                 });
             } catch (error) {
-                throw error instanceof Error
-                    ? error
-                    : new Error(String(error));
+                throw error instanceof Error ? error : new Error(String(error));
             }
         },
     };

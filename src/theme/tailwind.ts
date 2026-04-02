@@ -1,5 +1,5 @@
-import path from 'path';
-import type { TailwindTheme, TailwindConfig } from '../types.js';
+import path from "path";
+import type { TailwindTheme, TailwindConfig } from "../types.js";
 
 /**
  * Merge base theme with extended theme properties.
@@ -31,9 +31,7 @@ export function mergeThemeWithExtend(theme: TailwindTheme): TailwindTheme {
 /**
  * Load and resolve a Tailwind configuration file.
  */
-export async function loadTailwindConfig(
-    configPath: string
-): Promise<TailwindConfig> {
+export async function loadTailwindConfig(configPath: string): Promise<TailwindConfig> {
     try {
         const absolutePath = path.resolve(configPath);
 
@@ -49,7 +47,7 @@ export async function loadTailwindConfig(
         throw new Error(
             `Failed to load Tailwind config from ${configPath}: ${
                 error instanceof Error ? error.message : String(error)
-            }`
+            }`,
         );
     }
 }

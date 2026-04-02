@@ -1,13 +1,13 @@
-import type { FontSize } from '../types.js';
-import { INVALID_TEXT_PROPS } from '../constants.js';
-import { convertToRem } from '../utils.js';
+import type { FontSize } from "../types.js";
+import { INVALID_TEXT_PROPS } from "../constants.js";
+import { convertToRem } from "../utils.js";
 
 /**
  * Process Tailwind font sizes into theme.json format.
  */
 export function processFontSizes(
     sizes: Record<string, string | [string, Record<string, string>]>,
-    fontSizeLabels?: Record<string, string>
+    fontSizeLabels?: Record<string, string>,
 ): FontSize[] {
     return Object.entries(sizes).map(([name, value]) => {
         const size = Array.isArray(value) ? value[0] : value;
@@ -35,10 +35,8 @@ export function sortFontSizes(fontSizes: FontSize[]): FontSize[] {
  */
 export function resolveFontSizes(
     variables: Array<[string, string]>,
-    tailwindSizes:
-        | Record<string, string | [string, Record<string, string>]>
-        | undefined,
-    fontSizeLabels?: Record<string, string>
+    tailwindSizes: Record<string, string | [string, Record<string, string>]> | undefined,
+    fontSizeLabels?: Record<string, string>,
 ): FontSize[] {
     const entries: FontSize[] = [];
 

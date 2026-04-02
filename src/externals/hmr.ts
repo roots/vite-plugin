@@ -53,12 +53,12 @@ if (import.meta.hot) {
 export function shouldInjectHmr(
     code: string,
     id: string,
-    config: { enabled: boolean; editorPattern: string | RegExp }
+    config: { enabled: boolean; editorPattern: string | RegExp },
 ): boolean {
     if (!config.enabled) return false;
-    if (code.includes('vite:beforeUpdate')) return false;
+    if (code.includes("vite:beforeUpdate")) return false;
 
-    if (typeof config.editorPattern === 'string') {
+    if (typeof config.editorPattern === "string") {
         return id.includes(config.editorPattern);
     }
 

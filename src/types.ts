@@ -142,7 +142,7 @@ export interface ThemeJsonConfig extends ThemeJsonPluginOptions {
     cssFile?: string;
 }
 
-import { SUPPORTED_EXTENSIONS } from './constants.js';
+import { SUPPORTED_EXTENSIONS } from "./constants.js";
 
 export type SupportedExtension = (typeof SUPPORTED_EXTENSIONS)[number];
 

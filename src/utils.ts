@@ -1,4 +1,4 @@
-import { EXEMPT_PACKAGES, CSS_WIDE_KEYWORDS } from './constants.js';
+import { EXEMPT_PACKAGES, CSS_WIDE_KEYWORDS } from "./constants.js";
 
 /**
  * Convert a CSS size value to rem.
@@ -6,11 +6,11 @@ import { EXEMPT_PACKAGES, CSS_WIDE_KEYWORDS } from './constants.js';
 export function convertToRem(size: string): number {
     size = size.trim().toLowerCase();
 
-    if (size.endsWith('px')) {
+    if (size.endsWith("px")) {
         return parseFloat(size) / 16;
     }
 
-    if (size.endsWith('em') || size.endsWith('rem')) {
+    if (size.endsWith("em") || size.endsWith("rem")) {
         return parseFloat(size);
     }
 
