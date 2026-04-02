@@ -42,10 +42,9 @@ describe('vite build integration', () => {
         it('should extract all 11 shades for each color family', async () => {
             const themeJson = await runBuild();
             const palette = themeJson.settings.color.palette;
-
             const expectedShades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
-
             const redColors = palette.filter((c: any) => c.slug.startsWith('red-'));
+
             expect(redColors).toHaveLength(11);
 
             for (const shade of expectedShades) {
@@ -62,7 +61,6 @@ describe('vite build integration', () => {
             const themeJson = await runBuild();
             const palette = themeJson.settings.color.palette;
             const slugs = palette.map((c: any) => c.slug);
-
             const expectedFamilies = [
                 'red', 'orange', 'amber', 'yellow', 'lime', 'green',
                 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo',
@@ -87,6 +85,7 @@ describe('vite build integration', () => {
 
         it('should not include colors when disabled', async () => {
             const themeJson = await runBuild({ disableTailwindColors: true });
+
             expect(themeJson.settings.color.palette).toBeUndefined();
         });
     });
@@ -118,6 +117,7 @@ describe('vite build integration', () => {
 
         it('should not include fonts when disabled', async () => {
             const themeJson = await runBuild({ disableTailwindFonts: true });
+
             expect(themeJson.settings.typography.fontFamilies).toBeUndefined();
         });
     });
@@ -130,6 +130,7 @@ describe('vite build integration', () => {
             expect(sizes).toHaveLength(13);
 
             const expectedSizes = ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', '8xl', '9xl'];
+
             for (const size of expectedSizes) {
                 expect(sizes).toContainEqual(
                     expect.objectContaining({ slug: size })
@@ -149,6 +150,7 @@ describe('vite build integration', () => {
 
         it('should not include font sizes when disabled', async () => {
             const themeJson = await runBuild({ disableTailwindFontSizes: true });
+
             expect(themeJson.settings.typography.fontSizes).toBeUndefined();
         });
     });
@@ -161,6 +163,7 @@ describe('vite build integration', () => {
             expect(radiusSizes).toHaveLength(8);
 
             const expectedSlugs = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'];
+
             for (const slug of expectedSlugs) {
                 expect(radiusSizes).toContainEqual(
                     expect.objectContaining({ slug })
@@ -180,6 +183,7 @@ describe('vite build integration', () => {
 
         it('should not include border radius when disabled', async () => {
             const themeJson = await runBuild({ disableTailwindBorderRadius: true });
+
             expect(themeJson.settings.border?.radiusSizes).toBeUndefined();
         });
     });
@@ -196,11 +200,13 @@ describe('vite build integration', () => {
 
         it('should include the __processed__ marker', async () => {
             const themeJson = await runBuild();
+
             expect(themeJson.__processed__).toBe('This file was generated using Vite');
         });
 
         it('should remove __preprocessed__ marker from base', async () => {
             const themeJson = await runBuild({}, 'theme-with-base.json');
+
             expect(themeJson.__preprocessed__).toBeUndefined();
             expect(themeJson.__processed__).toBe('This file was generated using Vite');
         });
@@ -281,8 +287,8 @@ describe('vite build integration', () => {
         it('should dedupe colors by slug with base values winning', async () => {
             const themeJson = await runBuild({}, 'theme-with-base.json');
             const palette = themeJson.settings.color.palette;
-
             const red500 = palette.filter((c: any) => c.slug === 'red-500');
+
             expect(red500).toHaveLength(1);
             expect(red500[0].color).toBe('#custom-red');
         });
@@ -290,8 +296,8 @@ describe('vite build integration', () => {
         it('should dedupe fontFamilies by slug with base values winning', async () => {
             const themeJson = await runBuild({}, 'theme-with-base.json');
             const fonts = themeJson.settings.typography.fontFamilies;
-
             const sans = fonts.filter((f: any) => f.slug === 'sans');
+
             expect(sans).toHaveLength(1);
             expect(sans[0].fontFamily).toBe('CustomSans, sans-serif');
         });
@@ -299,8 +305,8 @@ describe('vite build integration', () => {
         it('should dedupe fontSizes by slug with base values winning', async () => {
             const themeJson = await runBuild({}, 'theme-with-base.json');
             const sizes = themeJson.settings.typography.fontSizes;
-
             const xl = sizes.filter((s: any) => s.slug === 'xl');
+
             expect(xl).toHaveLength(1);
             expect(xl[0].size).toBe('99rem');
         });
@@ -311,8 +317,8 @@ describe('vite build integration', () => {
                 'theme-with-base.json'
             );
             const radiusSizes = themeJson.settings.border?.radiusSizes;
-
             const xl = radiusSizes!.filter((r: any) => r.slug === 'xl');
+
             expect(xl).toHaveLength(1);
             expect(xl[0].size).toBe('99rem');
         });
