@@ -1,4 +1,4 @@
-import { isCssWideKeyword } from '../utils.js';
+import { isCssWideKeyword } from "../utils.js";
 
 /**
  * Extract the content of an @theme block.
@@ -16,7 +16,7 @@ export function extractThemeContent(css: string): string | null {
 
     while (position < css.length) {
         // Handle escaped characters
-        if (css[position] === '\\') {
+        if (css[position] === "\\") {
             position += 2;
             continue;
         }
@@ -27,7 +27,7 @@ export function extractThemeContent(css: string): string | null {
             position++;
 
             while (position < css.length) {
-                if (css[position] === '\\') {
+                if (css[position] === "\\") {
                     position += 2;
                 } else if (css[position] === quote) {
                     position++;
@@ -41,11 +41,11 @@ export function extractThemeContent(css: string): string | null {
         }
 
         // Handle comments
-        if (css.slice(position, position + 2) === '/*') {
+        if (css.slice(position, position + 2) === "/*") {
             position += 2;
 
             while (position < css.length) {
-                if (css.slice(position, position + 2) === '*/') {
+                if (css.slice(position, position + 2) === "*/") {
                     position += 2;
                     break;
                 }
@@ -57,8 +57,8 @@ export function extractThemeContent(css: string): string | null {
         }
 
         // Handle braces
-        if (css[position] === '{') braceCount++;
-        if (css[position] === '}') braceCount--;
+        if (css[position] === "{") braceCount++;
+        if (css[position] === "}") braceCount--;
 
         if (braceCount === 0) {
             return css.substring(startIndex, position);
@@ -74,10 +74,7 @@ export function extractThemeContent(css: string): string | null {
 /**
  * Extract CSS variable name/value pairs from a theme block.
  */
-export function extractVariables(
-    regex: RegExp,
-    content: string | null
-): Array<[string, string]> {
+export function extractVariables(regex: RegExp, content: string | null): Array<[string, string]> {
     if (!content) return [];
 
     const re = new RegExp(regex.source, regex.flags);
@@ -88,7 +85,7 @@ export function extractVariables(
     while ((match = re.exec(content)) !== null) {
         const [, name, value] = match;
 
-        if (name && value && !name.includes('*') && !isCssWideKeyword(value.trim())) {
+        if (name && value && !name.includes("*") && !isCssWideKeyword(value.trim())) {
             variables.push([name, value.trim()]);
         }
     }

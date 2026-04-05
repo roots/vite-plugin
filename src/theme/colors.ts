@@ -1,19 +1,17 @@
-import type { ColorPalette } from '../types.js';
+import type { ColorPalette } from "../types.js";
 
 /**
  * Flatten a nested color object into [name, value] pairs.
  */
-export function flattenColors(
-    colors: Record<string, unknown>
-): Array<[string, string]> {
+export function flattenColors(colors: Record<string, unknown>): Array<[string, string]> {
     const flattened: Array<[string, string]> = [];
 
     for (const [name, value] of Object.entries(colors)) {
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
             flattened.push([name, value]);
-        } else if (typeof value === 'object' && value !== null) {
+        } else if (typeof value === "object" && value !== null) {
             for (const [shade, shadeValue] of Object.entries(value)) {
-                if (typeof shadeValue === 'string') {
+                if (typeof shadeValue === "string") {
                     flattened.push([`${name}-${shade}`, shadeValue]);
                 }
             }
@@ -26,16 +24,12 @@ export function flattenColors(
 /**
  * Format a color name for the WordPress editor.
  */
-export function formatColorName(
-    name: string,
-    shadeLabels?: Record<string, string>
-): string {
-    const parts = name.split('-');
+export function formatColorName(name: string, shadeLabels?: Record<string, string>): string {
+    const parts = name.split("-");
     const colorName = parts[0];
-    const shade = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+    const shade = parts.length > 1 ? parts.slice(1).join(" ") : undefined;
 
-    const capitalizedColor =
-        colorName.charAt(0).toUpperCase() + colorName.slice(1);
+    const capitalizedColor = colorName.charAt(0).toUpperCase() + colorName.slice(1);
 
     if (!shade) return capitalizedColor;
 
@@ -45,9 +39,9 @@ export function formatColorName(
 
     if (Number.isNaN(Number(shade))) {
         const capitalizedShade = shade
-            .split(' ')
+            .split(" ")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
+            .join(" ");
         return `${capitalizedColor} (${capitalizedShade})`;
     }
 
@@ -60,7 +54,7 @@ export function formatColorName(
 export function resolveColors(
     themeVariables: Array<[string, string]>,
     tailwindColors: Record<string, unknown> | undefined,
-    shadeLabels?: Record<string, string>
+    shadeLabels?: Record<string, string>,
 ): ColorPalette[] {
     const entries: ColorPalette[] = [];
 

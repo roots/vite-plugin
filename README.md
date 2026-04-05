@@ -31,8 +31,8 @@ Start by adding the base plugin to your Vite config:
 
 ```js
 // vite.config.js
-import { defineConfig } from 'vite';
-import { wordpressPlugin } from '@roots/vite-plugin';
+import { defineConfig } from "vite";
+import { wordpressPlugin } from "@roots/vite-plugin";
 
 export default defineConfig({
   plugins: [wordpressPlugin()],
@@ -49,22 +49,22 @@ The plugin can also handle third-party WordPress plugins that expose global Java
 
 ```js
 // vite.config.js
-import { defineConfig } from 'vite';
-import { wordpressPlugin } from '@roots/vite-plugin';
+import { defineConfig } from "vite";
+import { wordpressPlugin } from "@roots/vite-plugin";
 
 export default defineConfig({
   plugins: [
     wordpressPlugin({
       externalMappings: {
-        'acf-input': {
-          global: ['acf', 'input'],
-          handle: 'acf-input'
+        "acf-input": {
+          global: ["acf", "input"],
+          handle: "acf-input",
         },
-        'woocommerce-blocks': {
-          global: ['wc', 'blocks'],
-          handle: 'wc-blocks'
-        }
-      }
+        "woocommerce-blocks": {
+          global: ["wc", "blocks"],
+          handle: "wc-blocks",
+        },
+      },
     }),
   ],
 });
@@ -73,8 +73,8 @@ export default defineConfig({
 With this configuration, you can import from these packages in your code:
 
 ```js
-import { Field, FieldGroup } from 'acf-input';
-import { registerBlockType } from 'woocommerce-blocks';
+import { Field, FieldGroup } from "acf-input";
+import { registerBlockType } from "woocommerce-blocks";
 ```
 
 The plugin will transform these imports into global references:
@@ -98,8 +98,8 @@ You can customize the HMR behavior in your Vite config:
 
 ```js
 // vite.config.js
-import { defineConfig } from 'vite';
-import { wordpressPlugin } from '@roots/vite-plugin';
+import { defineConfig } from "vite";
+import { wordpressPlugin } from "@roots/vite-plugin";
 
 export default defineConfig({
   plugins: [
@@ -112,7 +112,7 @@ export default defineConfig({
         editorPattern: /editor/,
 
         // Name of the editor iframe element (default: 'editor-canvas')
-        iframeName: 'editor-canvas',
+        iframeName: "editor-canvas",
       },
     }),
   ],
@@ -127,38 +127,38 @@ To enable this feature, add the `wordpressThemeJson` plugin to your Vite config:
 
 ```js
 // vite.config.js
-import { defineConfig } from 'vite';
-import { wordpressThemeJson } from '@roots/vite-plugin';
+import { defineConfig } from "vite";
+import { wordpressThemeJson } from "@roots/vite-plugin";
 
 export default defineConfig({
   plugins: [
     wordpressThemeJson({
       // Optional: Configure shade labels
       shadeLabels: {
-        100: 'Lightest',
-        900: 'Darkest',
+        100: "Lightest",
+        900: "Darkest",
       },
 
       // Optional: Configure font family labels
       fontLabels: {
-        sans: 'Sans Serif',
-        mono: 'Monospace',
-        inter: 'Inter Font',
+        sans: "Sans Serif",
+        mono: "Monospace",
+        inter: "Inter Font",
       },
 
       // Optional: Configure font size labels
       fontSizeLabels: {
-        sm: 'Small',
-        base: 'Default',
-        lg: 'Large',
+        sm: "Small",
+        base: "Default",
+        lg: "Large",
       },
 
       // Optional: Configure border radius labels
       borderRadiusLabels: {
-        sm: 'Small',
-        md: 'Medium',
-        lg: 'Large',
-        full: 'Full',
+        sm: "Small",
+        md: "Medium",
+        lg: "Large",
+        full: "Full",
       },
 
       // Optional: Disable specific transformations
@@ -168,12 +168,12 @@ export default defineConfig({
       disableTailwindBorderRadius: false,
 
       // Optional: Configure paths
-      baseThemeJsonPath: './theme.json',
-      outputPath: 'assets/theme.json',
-      cssFile: 'app.css',
+      baseThemeJsonPath: "./theme.json",
+      outputPath: "assets/theme.json",
+      cssFile: "app.css",
 
       // Optional: Legacy Tailwind v3 config path
-      tailwindConfig: './tailwind.config.js',
+      tailwindConfig: "./tailwind.config.js",
     }),
   ],
 });
@@ -184,7 +184,7 @@ By default, Tailwind v4 will only [generate CSS variables](https://tailwindcss.c
 To generate the full default Tailwind color palette into your `theme.json`, you can use the `static` theme option when importing Tailwind:
 
 ```css
-@import 'tailwindcss' theme(static);
+@import "tailwindcss" theme(static);
 ```
 
 The same applies for customized colors in the `@theme` directive. To ensure your colors get generated, you can use another form of the `static` theme option:

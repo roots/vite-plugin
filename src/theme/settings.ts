@@ -4,9 +4,9 @@ import type {
     FontFamily,
     FontSize,
     BorderRadiusSize,
-} from '../types.js';
-import { sortFontSizes } from './font-sizes.js';
-import { sortBorderRadiusSizes } from './border-radius.js';
+} from "../types.js";
+import { sortFontSizes } from "./font-sizes.js";
+import { sortBorderRadiusSizes } from "./border-radius.js";
 
 /**
  * Deduplicate entries by slug, keeping the first occurrence.
@@ -36,8 +36,7 @@ export function buildSettings(params: {
         borderRadius?: boolean;
     };
 }): ThemeJsonSettings {
-    const { baseSettings, colors, fonts, fontSizes, borderRadii, disabled } =
-        params;
+    const { baseSettings, colors, fonts, fontSizes, borderRadii, disabled } = params;
 
     const settings: ThemeJsonSettings = {
         ...baseSettings,
@@ -52,10 +51,8 @@ export function buildSettings(params: {
               },
         typography: {
             ...baseSettings?.typography,
-            defaultFontSizes:
-                baseSettings?.typography?.defaultFontSizes ?? false,
-            customFontSize:
-                baseSettings?.typography?.customFontSize ?? false,
+            defaultFontSizes: baseSettings?.typography?.defaultFontSizes ?? false,
+            customFontSize: baseSettings?.typography?.customFontSize ?? false,
             fontFamilies: disabled.fonts
                 ? baseSettings?.typography?.fontFamilies
                 : dedupeBySlug([
@@ -68,7 +65,7 @@ export function buildSettings(params: {
                       dedupeBySlug([
                           ...(baseSettings?.typography?.fontSizes || []),
                           ...(fontSizes || []),
-                      ])
+                      ]),
                   ),
         },
     };
@@ -80,10 +77,7 @@ export function buildSettings(params: {
         }
     } else {
         const mergedRadiusSizes = sortBorderRadiusSizes(
-            dedupeBySlug([
-                ...(baseSettings?.border?.radiusSizes || []),
-                ...(borderRadii || []),
-            ])
+            dedupeBySlug([...(baseSettings?.border?.radiusSizes || []), ...(borderRadii || [])]),
         );
 
         if (mergedRadiusSizes.length === 0) {
