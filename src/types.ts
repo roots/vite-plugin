@@ -140,6 +140,15 @@ export interface ThemeJsonConfig extends ThemeJsonPluginOptions {
      * @default 'app.css'
      */
     cssFile?: string;
+
+    /**
+     * Directory path(s) to scan for `.theme.js` partial files
+     * that are deep merged into the generated theme.json.
+     * Set to `false` to disable.
+     *
+     * @default 'resources'
+     */
+    partials?: string | string[] | false;
 }
 
 import { SUPPORTED_EXTENSIONS } from "./constants.js";

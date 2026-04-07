@@ -172,12 +172,80 @@ export default defineConfig({
       outputPath: "assets/theme.json",
       cssFile: "app.css",
 
+      // Optional: Directory to scan for .theme.js partials (default: 'resources')
+      partials: "resources",
+
       // Optional: Legacy Tailwind v3 config path
       tailwindConfig: "./tailwind.config.js",
     }),
   ],
 });
 ```
+
+#### Partials
+
+The plugin automatically discovers `*.theme.js` files in the `resources/` directory and deep merges them into the generated `theme.json`. This lets you split your theme styles across multiple files — for example, co-locating block styles with their block templates.
+
+Partials support two export formats:
+
+**Shorthand** — `blocks` and `elements` at the top level are merged into `styles`:
+
+```js
+// resources/views/blocks/_global.theme.js
+export default {
+  blocks: {
+    "core/paragraph": {
+      spacing: { margin: { bottom: "1rem" } },
+    },
+  },
+  elements: {
+    h1: {
+      typography: {
+        fontSize: "var(--wp--preset--font-size--4-xl)",
+        fontWeight: "600",
+      },
+    },
+  },
+};
+```
+
+**Full** — merged at the root level, allowing you to target any part of theme.json:
+
+```js
+// resources/views/blocks/button.theme.js
+export default {
+  styles: {
+    blocks: {
+      "core/button": {
+        border: { radius: "0" },
+        color: {
+          background: "var(--wp--preset--color--black)",
+          text: "var(--wp--preset--color--white)",
+        },
+      },
+    },
+  },
+};
+```
+
+Files are merged in alphabetical order by path. During development, changes to `.theme.js` files will trigger a rebuild.
+
+You can customize the directory to scan, pass multiple directories, or disable partials entirely:
+
+```js
+wordpressThemeJson({
+  // Custom directory
+  partials: "src/blocks",
+
+  // Multiple directories
+  partials: ["resources/views/blocks", "resources/styles"],
+
+  // Disable
+  partials: false,
+});
+```
+
+#### Tailwind CSS Variables
 
 By default, Tailwind v4 will only [generate CSS variables](https://tailwindcss.com/docs/theme#generating-all-css-variables) that are discovered in your source files.
 

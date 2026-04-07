@@ -1,4 +1,4 @@
-import type { Plugin as VitePlugin } from "vite";
+import type { Plugin as VitePlugin, ResolvedConfig } from "vite";
 import fs from "fs";
 import path from "path";
 import type { ThemeJsonConfig, ThemeJson, TailwindConfig } from "../types.js";
@@ -10,6 +10,7 @@ import { resolveFonts } from "./fonts.js";
 import { resolveFontSizes } from "./font-sizes.js";
 import { resolveBorderRadii } from "./border-radius.js";
 import { buildSettings } from "./settings.js";
+import { mergePartials, findPartialFiles, resolvePartialDirs } from "./partials.js";
 
 /**
  * Generate a WordPress theme.json from Tailwind CSS
@@ -25,6 +26,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         baseThemeJsonPath = "./theme.json",
         outputPath = "assets/theme.json",
         cssFile = "app.css",
+        partials: partialsOption = "resources",
         shadeLabels,
         fontLabels,
         fontSizeLabels,
@@ -33,6 +35,7 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
 
     let cssContent: string | null = null;
     let resolvedTailwindConfig: TailwindConfig | undefined;
+    let rootDir: string = process.cwd();
 
     if (tailwindConfig !== undefined && typeof tailwindConfig !== "string") {
         throw new Error("tailwindConfig must be a string path or undefined");
@@ -42,9 +45,20 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
         name: "wordpress-theme-json",
         enforce: "pre",
 
-        async configResolved() {
+        async configResolved(resolvedConfig: ResolvedConfig) {
+            rootDir = resolvedConfig?.root ?? process.cwd();
+
             if (tailwindConfig) {
                 resolvedTailwindConfig = await loadTailwindConfig(tailwindConfig);
+            }
+
+            if (partialsOption !== false && resolvedConfig?.command === "serve") {
+                const partialDirs = resolvePartialDirs(partialsOption, rootDir);
+                const files = partialDirs.flatMap(findPartialFiles);
+
+                for (const file of files) {
+                    resolvedConfig.configFileDependencies.push(file);
+                }
             }
         },
 
@@ -115,6 +129,16 @@ export function wordpressThemeJson(config: ThemeJsonConfig = {}): VitePlugin {
                 };
 
                 delete themeJson.__preprocessed__;
+
+                // Merge partials
+                if (partialsOption !== false) {
+                    const partialDirs = resolvePartialDirs(partialsOption, rootDir);
+                    const partialFiles = partialDirs.flatMap(findPartialFiles);
+
+                    if (partialFiles.length > 0) {
+                        await mergePartials(themeJson, partialFiles);
+                    }
+                }
 
                 this.emitFile({
                     type: "asset",
