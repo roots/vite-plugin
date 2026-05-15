@@ -34,10 +34,12 @@ export function wordpressPlugin(config: WordPressPluginConfig = {}): VitePlugin 
         config() {
             if (config.jsx === false) return;
             return {
-                esbuild: {
-                    jsx: "transform" as const,
-                    jsxFactory: config.jsxFactory ?? "wp.element.createElement",
-                    jsxFragment: config.jsxFragment ?? "wp.element.Fragment",
+                oxc: {
+                    jsx: {
+                        runtime: "classic" as const,
+                        pragma: config.jsxFactory ?? "wp.element.createElement",
+                        pragmaFrag: config.jsxFragment ?? "wp.element.Fragment",
+                    },
                 },
             };
         },
