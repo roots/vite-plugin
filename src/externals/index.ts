@@ -31,6 +31,19 @@ export function wordpressPlugin(config: WordPressPluginConfig = {}): VitePlugin 
         name: "wordpress-plugin",
         enforce: "pre",
 
+        config() {
+            if (config.jsx === false) return;
+            return {
+                oxc: {
+                    jsx: {
+                        runtime: "classic" as const,
+                        pragma: config.jsxFactory ?? "wp.element.createElement",
+                        pragmaFrag: config.jsxFragment ?? "wp.element.Fragment",
+                    },
+                },
+            };
+        },
+
         options(opts: Rolldown.InputOptions) {
             return {
                 ...opts,

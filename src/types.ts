@@ -198,6 +198,25 @@ export interface WordPressPluginConfig {
     externalMappings?: Record<string, ExternalMapping>;
 
     /**
+     * Set to `false` to disable automatic JSX configuration.
+     */
+    jsx?: false;
+
+    /**
+     * JSX factory function.
+     *
+     * @default 'wp.element.createElement'
+     */
+    jsxFactory?: string;
+
+    /**
+     * JSX fragment identifier.
+     *
+     * @default 'wp.element.Fragment'
+     */
+    jsxFragment?: string;
+
+    /**
      * HMR configuration for the WordPress editor.
      */
     hmr?: {
