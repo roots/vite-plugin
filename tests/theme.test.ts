@@ -1024,24 +1024,11 @@ describe("wordpressThemeJson", () => {
     });
 
     it("should process border radius from Tailwind config", async () => {
-        const tailwindConfigWithRadius = {
-            default: {
-                theme: {
-                    colors: { primary: "#000000" },
-                    fontFamily: { sans: ["system-ui"] },
-                    fontSize: { base: "1rem" },
-                    borderRadius: {
-                        sm: "0.125rem",
-                        md: "0.375rem",
-                        lg: "0.5rem",
-                        full: "9999px",
-                    },
-                },
-            },
-        };
-
-        // Mock dynamic import used by loadTailwindConfig
-        vi.doMock(path.resolve(mockTailwindConfigPath), () => tailwindConfigWithRadius);
+        // loadTailwindConfig dynamically imports the resolved config path, so point
+        // path.resolve at a real fixture module that exports the config.
+        vi.mocked(path.resolve).mockReturnValue(
+            `${import.meta.dirname}/fixture/tailwind-radius.config.js`,
+        );
 
         const plugin = wordpressThemeJson({
             tailwindConfig: mockTailwindConfigPath,
@@ -1074,22 +1061,9 @@ describe("wordpressThemeJson", () => {
     });
 
     it("should merge theme.extend.borderRadius from Tailwind config", async () => {
-        const tailwindConfigWithExtend = {
-            default: {
-                theme: {
-                    borderRadius: {
-                        sm: "0.125rem",
-                    },
-                    extend: {
-                        borderRadius: {
-                            pill: "9999px",
-                        },
-                    },
-                },
-            },
-        };
-
-        vi.doMock(path.resolve(mockTailwindConfigPath), () => tailwindConfigWithExtend);
+        vi.mocked(path.resolve).mockReturnValue(
+            `${import.meta.dirname}/fixture/tailwind-extend.config.js`,
+        );
 
         const plugin = wordpressThemeJson({
             tailwindConfig: mockTailwindConfigPath,
