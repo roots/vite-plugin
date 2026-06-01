@@ -1,0 +1,19 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "baseBranchPatterns": ["main"],
+    "commitMessageAction": "⬆️ Bump",
+    "commitMessageTopic": "{{depName}}",
+    "extends": ["config:recommended", "schedule:weekly"],
+    "ignoreDeps": ["node"],
+    "packageRules": [
+        {
+            "groupName": "GitHub Actions",
+            "matchManagers": ["github-actions"]
+        },
+        {
+            "matchUpdateTypes": ["minor", "patch"],
+            "automerge": true
+        }
+    ],
+    "timezone": "America/Chicago"
+}
