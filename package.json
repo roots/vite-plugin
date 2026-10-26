@@ -48,7 +48,7 @@
         "test": "vitest run"
     },
     "dependencies": {
-        "@wordpress/dependency-extraction-webpack-plugin": "^6.47.0"
+        "@wordpress/dependency-extraction-webpack-plugin": "^7.0.0"
     },
     "devDependencies": {
         "@tailwindcss/oxide": "^4.3.0",
